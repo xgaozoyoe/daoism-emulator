@@ -17,8 +17,8 @@ end
 module type Statement = sig
   module Exp : Element.Exp
   type 'a t
-  val mkAssign: 'a Exp.t -> 'a Exp.t -> 'a t 
-  val mkLoad: 'a Exp.t -> 'a Exp.t -> 'a t 
+  val mkAssign: 'a Exp.t -> 'a Exp.t -> 'a t
+  val mkLoad: 'a Exp.t -> 'a Exp.t -> 'a t
   val mkComment: string -> 'a t
   val mkFallThrough: unit -> 'a t
   val mkDangling: unit -> 'a t
@@ -30,7 +30,7 @@ module Make:
   module BlockClosure: Block
   module Statement: Statement
   module BlockSet: (Set.S with type elt = BasicBlock.t)
-  
+
   type error
   type 'a merge_point =
     | Merge of 'a

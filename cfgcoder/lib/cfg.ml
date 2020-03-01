@@ -14,8 +14,8 @@ end
 module type Statement = sig
   module Exp : Exp
   type 'a t
-  val mkAssign: 'a Exp.t -> 'a Exp.t -> 'a t 
-  val mkLoad: 'a Exp.t -> 'a Exp.t -> 'a t 
+  val mkAssign: 'a Exp.t -> 'a Exp.t -> 'a t
+  val mkLoad: 'a Exp.t -> 'a Exp.t -> 'a t
   val mkComment: string -> 'a t
   val mkFallThrough: unit -> 'a t
   val mkDangling: unit -> 'a t
@@ -70,10 +70,10 @@ module AggregateSet (B: Block) = struct
   module BlockMap = Map.Make(B)
   module BlockSet = Set.Make(B)
   (*
-   * Aggregate is a set of blocks that all blocks in int are 
+   * Aggregate is a set of blocks that all blocks in int are
    * connected with each other
    *
-   *  |<----------------- top aggregate scope ------------->| 
+   *  |<----------------- top aggregate scope ------------->|
    *
    *  +------ aggregate set -------+
    *  |                            |
@@ -140,7 +140,7 @@ end
 module Make (BasicBlock: Block) = struct
   module Exp = MakeExp
   module Statement = MakeStatement(Exp)
-  module BlockSet = Set.Make(BasicBlock) 
+  module BlockSet = Set.Make(BasicBlock)
   module BlockMap = Map.Make(BasicBlock)
   module BGraph = Graph(BasicBlock)
   module BlockClosure = AggregateSet(BasicBlock)
@@ -157,7 +157,7 @@ module Make (BasicBlock: Block) = struct
     BlockClosure.iter (fun aggo ->
       let aggs = BlockClosure.next aggo in
       let nexts = List.fold_left (fun acc a ->
-        BlockClosure.id a ^ ";" ^ acc 
+        BlockClosure.id a ^ ";" ^ acc
       ) "" aggs in
       print_endline @@ (BlockClosure.id aggo) ^ " -> " ^ nexts
     ) aggro
@@ -193,13 +193,13 @@ module Make (BasicBlock: Block) = struct
      *)
     let extend_callback c =
       if ((entry_as_exit && BasicBlock.equal c entry
-            && (List.length !path > 0)) 
+            && (List.length !path > 0))
          || (not (BlockSet.mem c blockset))) then
         false
       else begin (* A valid extention point *)
         let tl_for_c = get_tl_for c (List.rev !path) in
         match tl_for_c with
-        | [] -> (* Nothing to aggregate *) 
+        | [] -> (* Nothing to aggregate *)
           if not (BlockMap.mem c !aggregate_map) then
             aggregate_map := BlockMap.add c
               (ref (BlockSet.singleton c)) !aggregate_map;
@@ -412,11 +412,11 @@ module Make (BasicBlock: Block) = struct
         let catch = Statement.mkMutInd branchs in
         (exits, Statement.bind None
             (Statement.bind None previous statement) catch)
-      end 
+      end
     in
     r
-       
-  (* Trace the entry block all the way to exit*) 
+
+  (* Trace the entry block all the way to exit*)
   and trace_within entry aggro translator =
     Format.printf "trace within %s ...\n" (BlockClosure.id aggro);
     assert (BlockSet.mem entry aggro.blocks);

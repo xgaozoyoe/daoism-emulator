@@ -6,16 +6,16 @@ module type Exp = sig
   type vname
   type fname
   type 'a t
-  
+
   (* Helper functions *)
   val mkVar : vname -> 'a t
   val mkConstant : 'a -> 'a t
-  val mkRef : 'a t -> 'a t 
+  val mkRef : 'a t -> 'a t
   val mkDeref : 'a t -> 'a t
   val mkApp : 'a t -> 'a t array -> 'a t
   val mkOffset : fname -> 'a t -> 'a t
   val mkUnit : unit -> 'a t
-  val to_string : 'a t -> string 
+  val to_string : 'a t -> string
 end
 
 module MakeExp : Exp = struct
@@ -29,7 +29,7 @@ module MakeExp : Exp = struct
     | DEREF of 'a t
     | OFFSET of (fname * 'a t)
     | APP of 'a t * ('a t array)
- 
+
   (* Helper functions *)
   let mkVar t = VAR t
   let mkConstant c = CONSTANT c
