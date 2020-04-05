@@ -8,7 +8,7 @@ module type Event = sig
 
 end
 
-module Event (O:Object.Interface) (F:Feature.Interface) = struct
+module Make (O:Object.Interface) (F:Feature.Interface) = struct
 
   type t = (O.t ref) * (F.t)
 

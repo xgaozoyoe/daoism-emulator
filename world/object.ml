@@ -15,7 +15,7 @@ module Make (ID:UID.Interface) (Env: Environ.Interface) (M:Modifier.Interface)= 
   type t = {
     uid: key;
     env: Env.t;
-    modifier: (Env.elt M.t) list;
+    modifier: M.t list;
   }
 
   let to_string t = ID.to_string t.uid

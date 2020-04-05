@@ -1,7 +1,3 @@
-open Timer
-open Event
-open Object
-
 module UID = UID.Make (Int)
 
 module Feature = Feature.Make (UID)
@@ -27,6 +23,7 @@ let default_config _ = ()
 
 let init _ = { tile = Tile.mkMap (); events = [] }
 
-let run univ t = ()
+(* run univ t *)
+let run _ _ = ()
 
 let one_step _ = []
