@@ -62,7 +62,7 @@ module MakeStatement (E:Exp) = struct
   let mkFallThrough _ = FallThrough
   let mkDangling _ = Dangling
   let mkRaise i = Raise i
-  let mkComment c = Comment c 
+  let mkComment c = Comment c
   let bind v arg app = match arg with
      | FallThrough -> app
      | _ -> Bind (v, arg, app)
@@ -72,18 +72,24 @@ module MakeStatement (E:Exp) = struct
     | MutInd ls ->
       Emitter.emitLine emitter "let _ = cases";
       let emitter = Emitter.indent emitter in
-      ignore @@ List.map (fun (_,s) -> emit emitter s) ls;
+      ignore @@ List.map (fun (_,s) ->
+        let emitter' = Emitter.indent emitter in
+        Emitter.emitLine emitter "%s" "case _ then";
+        emit emitter' s
+      ) ls;
       Emitter.emitLine emitter "in"
     | Loop (_, s) -> begin
-      let emitter = Emitter.indent emitter in
-      emit emitter s;
+      Emitter.emitLine emitter "%s" "let ctx = loop ctx do";
+      let emitter' = Emitter.indent emitter in
+      emit emitter' s;
+      Emitter.emitLine emitter "%s" "end loop in"
       end
     | Raise c -> Emitter.emitLine emitter "raise %d" c
     | FallThrough -> Emitter.emitLine emitter "fallthrough"
     | Dangling -> Emitter.emitLine emitter "dangling"
     | Load (x, y) -> Emitter.emitLine emitter "%s <- load %s;"
-        (Exp.to_string x) (Exp.to_string y) 
+        (Exp.to_string x) (Exp.to_string y)
     | Assign (x, y) -> Emitter.emitLine emitter "%s <- ret %s;"
-        (Exp.to_string x) (Exp.to_string y) 
+        (Exp.to_string x) (Exp.to_string y)
 
 end

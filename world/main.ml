@@ -1,5 +1,5 @@
-let world = Universie.init Universe.default_config in
+let world = Universe.init Universe.default_config in
 
-let events = world.one_step ()
+let events = world.one_step () in
 
-List.iter (fun e -> Log.log "[event:] %s\n" Event.to_string event)
+List.iter (fun e -> Log.log "[event:] %s\n" Event.to_string event);;

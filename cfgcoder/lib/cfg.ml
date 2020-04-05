@@ -125,7 +125,7 @@ module AggregateSet (B: Block) = struct
    * Based on an underlying block cfg structure,
    * We would like to contract all the loop into one complex node.
    *)
-  let iter f a = 
+  let iter f a =
     ignore @@ BlockMap.fold (fun k v total ->
       if BlockSet.mem k total then total
       else begin
@@ -243,7 +243,7 @@ module Make (BasicBlock: Block) = struct
         BlockSet.union !v total
       end
     ) !aggregate_map BlockSet.empty
-    in 
+    in
     let aggro = !(BlockMap.find entry !aggro_map) in
     debug aggro;
     if entry_as_exit then flush stdout;
@@ -254,12 +254,12 @@ module Make (BasicBlock: Block) = struct
     | Diverge of 'a list
     | Dangle
 
-  let merge_to_string = function 
+  let merge_to_string = function
   | Merge bgg -> BlockClosure.id bgg
   | Dangle -> "Dangle"
-  | _ -> "Diverge"
-  
-  (* get exits of an entry block aggro set *) 
+  | Diverge ls -> List.fold_left (fun acc c -> acc ^ " " ^ BlockClosure.id c) "Diverge" ls
+
+  (* get exits of an entry block aggro set *)
   let get_merge_point aggro entry_aggro =
 
     let path: BlockClosure.t list ref = ref [] in
@@ -382,12 +382,19 @@ module Make (BasicBlock: Block) = struct
           in
           BlockSet.union es exits, ss @ [(Statement.Exp.mkUnit (), statement)]
         ) (BlockSet.empty, []) bs in
-      let catch = Statement.mkMutInd branchs in
-      let statement = Statement.bind None statement catch in
+      let statement = match branchs with
+      | [] -> Statement.bind None previous statement
+      | [h] -> Statement.bind None previous @@ Statement.bind None statement (snd h)
+      | _ -> begin
+          let catch = Statement.mkMutInd branchs in
+          let statement = Statement.bind None statement catch in
+          Statement.bind None previous statement
+        end
+      in
       if loop entry_aggro exits then
-        exits, Statement.mkLoop [] (Statement.bind None previous statement)
+        exits, Statement.mkLoop [] statement
       else
-        exits, Statement.bind None previous statement
+        exits, statement
 
     | Dangle -> (exits, Statement.bind None previous statement)
 
@@ -409,16 +416,21 @@ module Make (BasicBlock: Block) = struct
           in
           BlockSet.union es exits, ss @ [(Statement.Exp.mkUnit (), statement)]
         ) (BlockSet.empty, []) (BlockClosure.elements aggro) in
-        let catch = Statement.mkMutInd branchs in
-        (exits, Statement.bind None
-            (Statement.bind None previous statement) catch)
+        let statement = match branchs with
+        | [] -> Statement.bind None previous statement
+        | [h] -> Statement.bind None previous @@ Statement.bind None statement (snd h)
+        | _ -> begin
+            let catch = Statement.mkMutInd branchs in
+            Statement.bind None (Statement.bind None previous statement) catch
+          end
+        in (exits, statement)
       end
     in
     r
 
   (* Trace the entry block all the way to exit*)
   and trace_within entry aggro translator =
-    Format.printf "trace within %s ...\n" (BlockClosure.id aggro);
+    Format.printf "trace %s within %s ...\n" (BasicBlock.id entry) (BlockClosure.id aggro);
     assert (BlockSet.mem entry aggro.blocks);
     match BlockSet.elements aggro.blocks with
     | [] -> assert false

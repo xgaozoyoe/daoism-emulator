@@ -1,4 +1,3 @@
-(library
- (public_name daoism-world)
- (name world)
- (modules main))
+(executable
+ (name main)
+)
