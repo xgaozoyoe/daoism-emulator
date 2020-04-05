@@ -6,11 +6,11 @@ module type Interface = sig
 end
 
 
-module Make (O:Object) = struct
+module Make (O:Object.Interface) = struct
 
   type coordinate = int * int
 
-  type tile = Object.t
+  type tile = O.t
 
   type map = tile array array
 

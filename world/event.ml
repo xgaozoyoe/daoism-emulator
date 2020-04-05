@@ -10,12 +10,14 @@ end
 
 module Event (O:Object.Interface) (F:Feature.Interface) = struct
 
-  type t = ref O.t * F.t
+  type t = (O.t ref) * (F.t)
 
   let get_source t = !(fst t)
+
   let get_feature t = snd t
+
   let to_string t =
-    sprintf "<source: %s, feature: %s>"
+    Printf.sprintf "<source: %s, feature: %s>"
       (O.to_string (get_source t)) (F.to_string (get_feature t))
 
 end

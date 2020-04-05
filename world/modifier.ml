@@ -5,9 +5,9 @@ end
 
 module Make (ID:UID.Interface) (F:Feature.Interface) = struct
 
-  type 'a t = {
-    fit: 'a F.t -> bool;
-    batch: ('a F.t) list -> int -> int
+  type t = {
+    fit: F.t -> bool;
+    batch: F.t list -> int -> int
   }
 
 end

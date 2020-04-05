@@ -2,11 +2,15 @@ open Timer
 open Event
 open Object
 
-module UID = UID.Make (String)
+module UID = UID.Make (Int)
 
 module Feature = Feature.Make (UID)
 
-module Object = Object.Make ()
+module Modifier = Modifier.Make (UID) (Feature)
+
+module Env = Environ.Make (UID) (Feature) (Modifier)
+
+module Object = Object.Make (UID) (Env) (Modifier)
 
 module Tile = Tile.Make (Object)
 
