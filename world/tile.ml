@@ -1,6 +1,7 @@
 module type Interface = sig
 
   type coordinate
+  type tile
   type map
 
 end
@@ -15,6 +16,8 @@ module Make (O:Object.Interface) = struct
   type map = tile array array
 
   let mkMap () = [||]
+
+  let mk_tile name = O.mk_empty name name
 (*
   let get_tile: coordinate -> tile
   get_distance: coordinate -> coordinate -> int

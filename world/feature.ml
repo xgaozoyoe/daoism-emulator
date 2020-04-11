@@ -13,11 +13,11 @@ module Make (ID:UID.Interface) = struct
 
   let to_string b = match b with
     | Consume (id, attr, n) -> Printf.sprintf "[%s] <%s: Consume %d>"
-        (ID.to_string id) (Attribute.to_string attr) n
+        (ID.to_string id) (attr#name) n
     | Produce (id, attr, n) -> Printf.sprintf "[%s] <%s: Produce %d>"
-        (ID.to_string id) (Attribute.to_string attr) n
+        (ID.to_string id) (attr#name) n
     | Hold (id, attr, n) -> Printf.sprintf "[%s] <%s: Hold %d>"
-        (ID.to_string id) (Attribute.to_string attr) n
+        (ID.to_string id) (attr#name) n
 end
 
 

@@ -1,4 +1,4 @@
-module UID = UID.Make (Int)
+module UID = UID.Make (UID.Id)
 
 module Feature = Feature.Make (UID)
 
@@ -11,6 +11,8 @@ module Object = Object.Make (UID) (Env) (Modifier)
 module Tile = Tile.Make (Object)
 
 module Event = Event.Make (Object) (Feature)
+
+module Npc = Npc.Make (Object)
 
 type universe = {
     tile: Tile.map;

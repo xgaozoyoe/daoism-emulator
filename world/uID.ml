@@ -3,7 +3,15 @@ module type Interface = sig
 
   val compare: t -> t -> int
   val to_string: t -> string
+  val of_string: string -> t
 
+end
+
+module Id = struct
+  type t = string
+  let compare = String.compare
+  let to_string t = t
+  let of_string t = t
 end
 
 module Make (T: Interface) : Interface = struct
@@ -25,5 +33,8 @@ module Make (T: Interface) : Interface = struct
   let to_string t =
     List.fold_left (fun acc c -> acc ^ "." ^ T.to_string c)
         (T.to_string (List.hd t)) (List.tl t)
+
+  let of_string t = [ T.of_string t ]
+
 end
 
