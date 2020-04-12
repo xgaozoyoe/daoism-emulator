@@ -1,0 +1,4 @@
+(library
+  (name universe)
+  (libraries core npc)
+)

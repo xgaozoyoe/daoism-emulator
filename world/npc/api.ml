@@ -1,16 +1,18 @@
+open Core
 open Timer
-module Make (O:Object.Interface) (T:Tile.Interface) = struct
+
+module Make (O:Object.Interface) = struct
 
   type npc_state = {
     name: string;
-    features: O.feature list;
-    tile: T.tile ref;
+    features: O.Env.Feature.t list;
+    tile: O.t ref;
   }
 
   type t = {
     body: O.t;
     state: npc_state * time_slice;
-    defaut_state: unit -> string * O.feature list * time_slice;
+    defaut_state: unit -> string * O.Env.Feature.t list * time_slice;
   }
 
   let mk_npc_state desc fs tile = {name=desc; features=fs; tile=tile}

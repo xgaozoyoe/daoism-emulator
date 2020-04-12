@@ -1,25 +1,23 @@
 module type Interface = sig
 
+  module Env: Environ.Interface
+
   type t
-  type key
-  type feature
 
   val to_string: t -> string
-  val take_features: feature list -> t -> t
   val mk_empty: string -> string -> t
+  val take_features: Env.Feature.t list -> t -> t
+  val step: unit -> Env.Feature.t list
 
 end
 
-
 module Make (ID:UID.Interface) (Env: Environ.Interface) (M:Modifier.Interface)= struct
 
-  type key = ID.t
-
-  type feature = Env.feature
+  module Env = Env
 
   type t = {
     name: string;
-    uid: key;
+    uid: ID.t;
     env: Env.t;
     modifier: M.t list;
   }
@@ -33,6 +31,8 @@ module Make (ID:UID.Interface) (Env: Environ.Interface) (M:Modifier.Interface)= 
   let take_features features t = List.fold_left (fun acc f ->
     take_feature f acc
   ) t features
+
+  let step _ = []
 
 end
 
