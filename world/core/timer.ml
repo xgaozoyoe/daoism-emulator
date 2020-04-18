@@ -2,6 +2,8 @@ type time_slice = int
 
 type timer_excp = StaleTimeSlice
 
+let of_int i = i
+
 exception TimerException of timer_excp
 
 let play slice =

@@ -5,32 +5,51 @@ module Make (O:Object.Interface) = struct
 
   type npc_state = {
     name: string;
-    features: O.Env.Feature.t list;
-    tile: O.t ref;
+    features: (O.Env.Feature.t * (O.t ref option)) list;
+    last: time_slice;
+    tile: O.t ref; (* position of the npc *)
   }
 
   type t = {
-    body: O.t;
-    state: npc_state * time_slice;
-    defaut_state: unit -> string * O.Env.Feature.t list * time_slice;
+    state: npc_state option;
   }
 
-  let mk_npc_state desc fs tile = {name=desc; features=fs; tile=tile}
+  let mk_npc_state desc fs tile t = { name=desc; features=fs; tile=tile; last = t }
 
-  let mk_npc obj defaut tile =
-    let (desc, fs, t) = defaut () in
-    { body = obj; state = (mk_npc_state desc fs tile), t; defaut_state = defaut }
+  class elt n ds tile = object (self)
 
-  let one_step npc =
-    let (state, t), fs = match npc.state with state, t -> begin
-      let t = Timer.play t in
-      if trigger t then begin
-        Logger.log "%s finished %s\n" (O.to_string npc.body) state.name;
-        let (desc, fs, last) = npc.defaut_state () in
-        let tile = state.tile in
-        (mk_npc_state desc fs tile, last), (fst npc.state).features
-      end else
-        (state, t), []
-    end in
-    { npc with body = O.take_features fs npc.body; state = (state, t) }
+    inherit O.elt n
+
+    val mutable defaut_state : (t, string) O.state_trans = ds
+
+    val mutable state =
+      let desc, fs, t = ds { state = None } in
+      { state = Some (mk_npc_state desc fs tile t) }
+
+    method step _ = begin
+      match state.state with
+      | Some state' -> begin
+          let t = Timer.play state'.last in
+          let fs = if trigger t then begin
+            Logger.log "%s finished %s\n" name state'.name;
+            let (desc, fs, last) = defaut_state state in
+            let tile' = state'.tile in
+            let fs' = state'.features in
+            state <- { state = Some (mk_npc_state desc fs tile' last) };
+            fs'
+          end else begin
+            state <- { state = Some {state' with last = t} };
+            []
+          end in
+          let fs, events = List.fold_left (fun (fs, events) (f, opt_target) ->
+            match opt_target with
+            | None -> (f::fs), events
+            | Some obj_ref -> fs, ((f, obj_ref) :: events);
+          ) ([], []) fs in
+          self#take_features fs;
+          events
+        end
+      | None -> []
+    end
+  end
 end

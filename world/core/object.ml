@@ -1,39 +1,60 @@
 module type Interface = sig
 
+  module ID: UID.Interface
   module Env: Environ.Interface
 
-  type t
+  type t = <
+    get_name: string;
+    take_features: Env.Feature.t list -> unit;
+    step: unit -> (Env.Feature.t * t ref) list
+  >
 
-  val to_string: t -> string
-  val mk_empty: string -> string -> t
-  val take_features: Env.Feature.t list -> t -> t
-  val step: unit -> Env.Feature.t list
+  class virtual elt: string -> object
+    val name: string
+    val uid: ID.t
+    val mutable env: Env.t
+    val mutable modifier: Env.Modifier.t list
+    method get_name: string
+    method take_features: Env.Feature.t list -> unit
+    method virtual step: unit -> (Env.Feature.t * t ref) list
+  end
+
+
+  type ('a, 'b) state_trans =
+    'a -> 'b * (Env.Feature.t * (t ref option)) list * Timer.time_slice
 
 end
 
-module Make (ID:UID.Interface) (Env: Environ.Interface) (M:Modifier.Interface)= struct
+module Make (ID:UID.Interface) (Env: Environ.Interface) = struct
 
   module Env = Env
+  module ID = ID
 
-  type t = {
-    name: string;
-    uid: ID.t;
-    env: Env.t;
-    modifier: M.t list;
-  }
+  type t = <
+    get_name: string;
+    take_features: Env.Feature.t list -> unit;
+    step: unit -> (Env.Feature.t * t ref) list
+  >
 
-  let mk_empty name uid = {name = name; uid = ID.of_string uid; env = Env.empty; modifier = []}
+  type ('a, 'b) state_trans =
+    'a -> 'b * (Env.Feature.t * (t ref option)) list * Timer.time_slice
 
-  let to_string t = Printf.sprintf "<[%s]%s>" (ID.to_string t.uid) t.name
+  class virtual elt n = object
 
-  let take_feature _ t = t
+    val name = n
+    val uid = ID.of_string n
+    val mutable env = Env.empty
+    val mutable modifier: Env.Modifier.t list = []
 
-  let take_features features t = List.fold_left (fun acc f ->
-    take_feature f acc
-  ) t features
+    method get_name = name
 
-  let step _ = []
+    method take_features features =
+      env <- List.fold_left (fun acc f ->
+         Env.proceed_feature f acc
+      ) env features
 
+    method virtual step: unit -> (Env.Feature.t * t ref) list
+  end
 end
 
 

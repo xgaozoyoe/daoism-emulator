@@ -1,5 +1,4 @@
 (executable
  (name main)
- (libraries core npc universe)
- (modes js)
+ (libraries core npc tiles universe)
 )

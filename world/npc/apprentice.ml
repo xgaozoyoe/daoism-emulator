@@ -29,6 +29,13 @@ end
 
 module Make (O:Object.Interface) = struct
 
+  let quality_to_total = function
+  | Quality.Unique -> 200
+  | Quality.Rare -> 150
+  | Quality.Elite -> 100
+  | Quality.Normal -> 80
+  | Quality.Antique -> Random.int 200
+
   let make_basic_features total =
     let ratio = [|Random.int 10; Random.int 10; Random.int 10; Random.int 10|] in
     let sum = Array.fold_left (fun acc c -> c + acc) 0 ratio in
@@ -42,10 +49,10 @@ module Make (O:Object.Interface) = struct
     |] in
     Array.map2 (fun amount wx -> O.Env.Feature.mk_produce wx amount) ratio wx
 
-  let make_apprentice full_name quality =
-    let obj = O.mk_empty full_name full_name in
-    let total = Config.total_wuxing_amount quality in
-    let basic_features = make_basic_features total in
-    O.take_features (Array.to_list basic_features) obj
+  let make_state quality timeslice = fun _ ->
+    let spawn = "Spawn" in
+    let features_array =
+      Array.map (fun x-> x, None) (make_basic_features (quality_to_total quality)) in
+    (spawn, features_array, timeslice)
 
 end

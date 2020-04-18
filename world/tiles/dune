@@ -1,0 +1,4 @@
+(library
+  (name tiles)
+  (libraries core npc)
+)

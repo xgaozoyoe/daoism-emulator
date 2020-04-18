@@ -3,6 +3,7 @@ module type Interface = sig
   type t
 
   module Feature: Feature.Interface
+  module Modifier: Modifier.Interface
 
   val empty: t
   val proceed_feature: Feature.t -> t -> t
@@ -13,6 +14,7 @@ end
 module Make (ID:UID.Interface) (F:Feature.Interface) (M:Modifier.Interface) = struct
 
   module Feature = F
+  module Modifier = M
   module FeatureMap = Map.Make(ID)
 
   type t = (Attribute.t * int) FeatureMap.t
