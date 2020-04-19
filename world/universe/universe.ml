@@ -18,7 +18,7 @@ module Npc = Npc.Api.Make (Object)
 
 module Tiles = Tiles.Api.Make (Object)
 
-type universe = {
+type t = {
     tile: Tiles.map;
     events: Event.t list;
     objs: (UID.t, Object.t ref) Hashtbl.t

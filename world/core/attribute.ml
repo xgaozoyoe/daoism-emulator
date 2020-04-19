@@ -1,1 +1,1 @@
-type t = <name: string>
+type t = <name: string; category: string; test: t->bool>

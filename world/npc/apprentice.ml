@@ -11,20 +11,24 @@ type potential =
   | Ji (* 机缘 *)
   | Qi (* 潜质 *)
 
-class wuXing wx = object
+class wuXing wx = object (self)
   method name = match wx with
     | Jing -> "Jing"
     | Mu -> "Mu"
     | Shui -> "Shui"
     | Huo -> "Huo"
     | Tu -> "Tu"
+  method category = "WuXing"
+  method test (f:Attribute.t) = f#category = self#category
 end
 
-class growth p = object
+class growth p = object (self)
   method name = match p with
     | Wu -> "Wu"
     | Ji -> "Ji"
     | Qi -> "Qi"
+  method category = "Growth"
+  method test (f:Attribute.t) = f#category = self#category
 end
 
 module Make (O:Object.Interface) = struct

@@ -16,11 +16,15 @@ module Make (O:Object.Interface) : Interface = struct
 
   module Object = O
 
+  module Apprentice = Npc.Apprentice.Make (Object)
+
+  module Npc = Npc.Api.Make (Object)
+
   type coordinate = int * int
 
   type state = {
     name: string;
-    features: (O.Env.Feature.t * (O.t ref option)) list;
+    features: (O.Env.Feature.t * (O.t ref option)) array;
     last: Timer.time_slice;
   }
 
@@ -35,16 +39,21 @@ module Make (O:Object.Interface) : Interface = struct
 
   class elt n ds = object (self)
 
-    inherit O.elt n
+    inherit Object.elt n
 
-    val mutable defaut_state: (tile_state, string) O.state_trans = ds
+    val mutable defaut_state: (tile_state, string) Object.state_trans = ds
 
     val mutable state =
       let desc, fs, t = ds { state = None } in
       { state = Some (mk_tile_state desc fs t) }
 
-    method step _ : (O.Env.Feature.t * O.t ref) list = begin
-      match state.state with
+    method step universe : (O.Env.Feature.t * O.t ref) list = begin
+      let spawn_events = O.Env.fold (fun key (attr, amount) acc ->
+        let npc_attr = new Universe.Api.attrNPC Universe.Api.Apprentice in
+        (O.Env.Feature.mk_produce npc_attr 1, Some universe)
+      ) () self#get_env
+      in
+      let step_events = match state.state with
       | Some state' -> begin
           let t = Timer.play state'.last in
           let fs = if Timer.trigger t then begin
@@ -56,17 +65,18 @@ module Make (O:Object.Interface) : Interface = struct
           end else begin
             Logger.log "%s tick %s\n" name state'.name;
             state <- { state = Some {state' with last = t} };
-            []
+            [||]
           end in
           let fs, events = List.fold_left (fun (fs, events) (f, opt_target) ->
             match opt_target with
             | None -> (f::fs), events
             | Some obj_ref -> fs, ((f, obj_ref) :: events);
           ) ([], []) fs in
-          self#take_features fs;
+          self#take_features @@ Array.of_list fs;
           events
         end
       | None -> []
+      in spawn_events :: step_events
     end
   end
 

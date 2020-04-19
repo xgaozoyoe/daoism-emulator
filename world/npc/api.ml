@@ -3,9 +3,11 @@ open Timer
 
 module Make (O:Object.Interface) = struct
 
+  type dfs = (O.Env.Feature.t * (O.t ref option)) array
+
   type npc_state = {
     name: string;
-    features: (O.Env.Feature.t * (O.t ref option)) list;
+    features: (O.Env.Feature.t * (O.t ref option)) array;
     last: time_slice;
     tile: O.t ref; (* position of the npc *)
   }
@@ -14,9 +16,9 @@ module Make (O:Object.Interface) = struct
     state: npc_state option;
   }
 
-  let mk_npc_state desc fs tile t = { name=desc; features=fs; tile=tile; last = t }
+  let mk_npc_state desc (fs:dfs) tile t = { name=desc; features=fs; tile=tile; last = t }
 
-  class elt n ds tile = object (self)
+  class elt n ds (tile:O.t ref) = object (self)
 
     inherit O.elt n
 
@@ -39,14 +41,14 @@ module Make (O:Object.Interface) = struct
             fs'
           end else begin
             state <- { state = Some {state' with last = t} };
-            []
+            [||]
           end in
-          let fs, events = List.fold_left (fun (fs, events) (f, opt_target) ->
+          let fs, events = Array.fold_left (fun (fs, events) (f, opt_target) ->
             match opt_target with
             | None -> (f::fs), events
             | Some obj_ref -> fs, ((f, obj_ref) :: events);
           ) ([], []) fs in
-          self#take_features fs;
+          self#take_features @@ Array.of_list fs;
           events
         end
       | None -> []

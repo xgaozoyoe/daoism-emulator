@@ -5,8 +5,8 @@ module type Interface = sig
 
   type t = <
     get_name: string;
-    take_features: Env.Feature.t list -> unit;
-    step: unit -> (Env.Feature.t * t ref) list
+    take_features: Env.Feature.t array -> unit;
+    step: (t ref) -> (Env.Feature.t * t ref) list
   >
 
   class virtual elt: string -> object
@@ -15,13 +15,13 @@ module type Interface = sig
     val mutable env: Env.t
     val mutable modifier: Env.Modifier.t list
     method get_name: string
-    method take_features: Env.Feature.t list -> unit
-    method virtual step: unit -> (Env.Feature.t * t ref) list
+    method take_features: Env.Feature.t array -> unit
+    method virtual step: (t ref) -> (Env.Feature.t * t ref) list
   end
 
 
   type ('a, 'b) state_trans =
-    'a -> 'b * (Env.Feature.t * (t ref option)) list * Timer.time_slice
+    'a -> 'b * (Env.Feature.t * (t ref option)) array * Timer.time_slice
 
 end
 
@@ -32,12 +32,12 @@ module Make (ID:UID.Interface) (Env: Environ.Interface) = struct
 
   type t = <
     get_name: string;
-    take_features: Env.Feature.t list -> unit;
-    step: unit -> (Env.Feature.t * t ref) list
+    take_features: Env.Feature.t array -> unit;
+    step: t ref -> (Env.Feature.t * t ref) list
   >
 
   type ('a, 'b) state_trans =
-    'a -> 'b * (Env.Feature.t * (t ref option)) list * Timer.time_slice
+    'a -> 'b * (Env.Feature.t * (t ref option)) array * Timer.time_slice
 
   class virtual elt n = object
 
@@ -48,12 +48,14 @@ module Make (ID:UID.Interface) (Env: Environ.Interface) = struct
 
     method get_name = name
 
+    method get_env = env
+
     method take_features features =
-      env <- List.fold_left (fun acc f ->
+      env <- Array.fold_left (fun acc f ->
          Env.proceed_feature f acc
       ) env features
 
-    method virtual step: unit -> (Env.Feature.t * t ref) list
+    method virtual step: t ref -> (Env.Feature.t * t ref) array
   end
 end
 
