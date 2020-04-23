@@ -1,60 +1,43 @@
-module type Interface = sig
+module ID = UID.Make(UID.Id)
 
-  type t
+module FeatureMap = Map.Make(ID)
 
-  module ID: UID.Interface
-  module Feature: Feature.Interface
-  module Modifier: Modifier.Interface
+type elt = Attribute.t * int
 
-  val empty: t
-  val proceed_feature: Feature.t -> t -> t
-  val fold: (ID.t -> (Attribute.t * int) -> 'a -> 'a)  -> 'a -> t -> 'a
+type rule = (elt array * elt)
+
+type t = {
+  mutable features: elt FeatureMap.t;
+  rules: rule list;
+}
 
 
-end
+let update_entry key cb_exist cb_none env =
+  let v = match FeatureMap.find_opt key env.features with
+  | None -> cb_none
+  | Some c -> cb_exist c
+  in
+  match v with
+  | Some v -> env.features <- FeatureMap.add key v env.features
+  | None -> ()
 
-module Make (ID:UID.Interface) (F:Feature.Interface) (M:Modifier.Interface) = struct
+let empty = { features = FeatureMap.empty; rules = [] }
 
-  module ID = ID
-  module Feature = F
-  module Modifier = M
-  module FeatureMap = Map.Make(ID)
+let fold f acc env = FeatureMap.fold f env.features acc
 
-  type elt = Attribute.t * int
+let proceed_feature feature env =
+  match feature with
+  | Feature.Consume (attr, amount) ->
+    update_entry (ID.of_string attr#name) (fun (attr,a) ->
+      if a >= amount then Some (attr, a - amount) else Some (attr, 0)
+    ) None env
+  | Feature.Produce (attr, amount) ->
+    update_entry (ID.of_string attr#name) (fun (attr,a) ->
+      Some (attr, a + amount)
+    ) (Some (attr, amount)) env
+  | Feature.Hold (attr, amount) ->
+    update_entry (ID.of_string attr#name) (fun _ ->
+      Some (attr, amount)
+    ) (Some (attr, amount)) env
 
-  type t = elt FeatureMap.t
-
-  type rule = (t array * t)
-
-  let update_entry key cb_exist cb_none env =
-    let v = match FeatureMap.find_opt key env with
-    | None -> cb_none
-    | Some c -> cb_exist c
-    in
-    match v with
-    | Some v -> FeatureMap.add key v env
-    | None -> env
-
-  let empty = FeatureMap.empty
-
-  let fold f acc env = FeatureMap.fold f acc env
-
-  let proceed_feature feature env =
-    match feature with
-    | F.Consume (attr, amount) ->
-      update_entry (ID.of_string attr#name) (fun (attr,a) ->
-        if a >= amount then Some (attr, a - amount) else Some (attr, 0)
-      ) None env
-    | F.Produce (attr, amount) ->
-      update_entry (ID.of_string attr#name) (fun (attr,a) ->
-        Some (attr, a + amount)
-      ) (Some (attr, amount)) env
-    | F.Hold (attr, amount) ->
-      update_entry (ID.of_string attr#name) (fun _ ->
-        Some (attr, amount)
-      ) (Some (attr, amount)) env
-
-  let apply pickers env = []
-end
-
-end
+let apply_rules _ = []

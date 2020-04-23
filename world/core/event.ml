@@ -1,40 +1,20 @@
-module type Event = sig
+type t = {
+  src: Object.t ref;
+  target: Object.t ref;
+  feature: Feature.t;
+}
 
-  module Object:Object.Interface
+let get_source t = !(t.src)
 
-  type t
+let get_target t = !(t.target)
 
-  val mk_event: Object.t ref -> Object.Env.Feature.t -> Object.t ref -> t
-  val get_source: t -> Object.t
-  val get_feature: t -> Object.Env.Feature.t
-  val get_target: t -> Object.t
-  val to_string: t -> string
+let get_feature t = t.feature
 
-end
+let mk_event src target feature =
+  {src = src; target=target; feature=feature}
 
-module Make (O:Object.Interface) = struct
-
-  module Object = O
-
-  type t = {
-    src: O.t ref;
-    target: O.t ref;
-    feature: O.Env.Feature.t;
-  }
-
-  let get_source t = !(t.src)
-
-  let get_target t = !(t.target)
-
-  let get_feature t = t.feature
-
-  let mk_event src target feature =
-    {src = src; target=target; feature=feature}
-
-  let to_string t =
-    Printf.sprintf "<source: %s, target: %s, feature: %s>"
-      ((get_source t)#get_name)
-      ((get_target t)#get_name)
-      (O.Env.Feature.to_string (get_feature t))
-
-end
+let to_string t =
+  Printf.sprintf "<source: %s, target: %s, feature: %s>"
+    ((get_source t)#get_name)
+    ((get_target t)#get_name)
+    (Feature.to_string (get_feature t))
