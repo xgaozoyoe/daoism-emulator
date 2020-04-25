@@ -2,7 +2,7 @@ module ID = UID.Make(UID.Id)
 
 type t = <
   get_name: string;
-  get_env: Environ.t;
+  get_env: (Feature.t * t ref)  Environ.t;
   take_features: Feature.t array -> unit;
   step: t ref -> (Feature.t * t ref) list
 >
@@ -14,7 +14,7 @@ class virtual elt n = object
 
   val name = n
   val uid = ID.of_string n
-  val mutable env = Environ.empty
+  val mutable env: (Feature.t * t ref) Environ.t = Environ.empty
   val mutable modifier: Modifier.t list = []
 
   method get_name = name

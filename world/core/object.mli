@@ -2,7 +2,7 @@ module ID:UID.Interface
 
 type t = <
   get_name: string;
-  get_env: Environ.t;
+  get_env: (Feature.t * t ref) Environ.t;
   take_features: Feature.t array -> unit;
   step: (t ref) -> (Feature.t * t ref) list
 >
@@ -10,11 +10,11 @@ type t = <
 class virtual elt: string -> object
   val name: string
   val uid: ID.t
-  val mutable env: Environ.t
+  val mutable env: (Feature.t * t ref) Environ.t
   val mutable modifier: Modifier.t list
   method get_name: string
   method take_features: Feature.t array -> unit
-  method get_env: Environ.t
+  method get_env: (Feature.t * t ref) Environ.t
   method virtual step: (t ref) -> (Feature.t * t ref) list
 end
 

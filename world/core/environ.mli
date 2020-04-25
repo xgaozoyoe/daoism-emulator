@@ -1,10 +1,11 @@
 module ID:UID.Interface
-module Attribute = Attribute.Api
 
-type t
 type elt = Attribute.t * int
+type 'a rule
+type 'a t
 
-val empty: t
-val proceed_feature: Feature.t -> t -> unit
-val fold: (ID.t -> (Attribute.t * int) -> 'a -> 'a)  -> 'a -> t -> 'a
-val apply_rules: t -> Feature.t list
+val empty: 'a t
+val proceed_feature: Feature.t -> 'a t -> unit
+val fold: (ID.t -> (Attribute.t * int) -> 'a -> 'a)  -> 'a -> 'a t -> 'a
+val apply_rules: 'a t -> 'a list
+val dump: 'a t -> string

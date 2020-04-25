@@ -30,21 +30,17 @@ class elt n ds = object (self)
     let desc, fs, t = ds { state = None } in
     { state = Some (mk_tile_state desc fs t) }
 
-  method step universe : (Feature.t * Object.t ref) list = begin
-    let spawn_events = List.map (fun f -> (f, universe)) (Environ.apply_rules self#get_env) in
-    (*
-    O.Env.fold (fun key (attr, amount) acc ->
-      let npc_attr = new Universe.Api.attrNPC Universe.Api.Apprentice in
-      (Feature.mk_produce npc_attr 1, Some universe)
-    ) () self#get_env
-    *)
+  method step _ : (Feature.t * Object.t ref) list = begin
+    let spawn_events = Environ.apply_rules self#get_env in
     let step_events = match state.state with
     | Some state' -> begin
         let t = Timer.play state'.last in
         let fs = if Timer.trigger t then begin
-          Logger.log "%s finished %s\n" name state'.name;
           let (desc, fs, last) = default_state state in
           let fs' = state'.features in
+          Logger.log "%s finished %s and produce: %s\n" name state'.name
+            (Array.fold_left (fun acc (c,_) -> acc ^ " " ^ Feature.to_string c) "" fs');
+          Logger.log "%s\n" (Environ.dump self#get_env);
           state <- { state = Some (mk_tile_state desc fs last) };
           Array.to_list fs'
         end else begin
