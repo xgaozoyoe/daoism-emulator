@@ -11,3 +11,5 @@ let play slice =
   slice - 1
 
 let trigger slice = (slice = 1)
+
+let to_string t = string_of_int t

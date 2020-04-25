@@ -48,7 +48,7 @@ class elt n ds = object (self)
           state <- { state = Some (mk_tile_state desc fs last) };
           Array.to_list fs'
         end else begin
-          Logger.log "%s tick %s\n" name state'.name;
+          Logger.log "%s tick %s, remain: %s\n" name state'.name (Timer.to_string t);
           state <- { state = Some {state' with last = t} };
           []
         end in
