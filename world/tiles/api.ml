@@ -24,7 +24,7 @@ class elt n ds = object (self)
 
   inherit Object.elt n
 
-  val mutable defaut_state: (tile_state, string) Object.state_trans = ds
+  val mutable default_state: (tile_state, string) Object.state_trans = ds
 
   val mutable state =
     let desc, fs, t = ds { state = None } in
@@ -43,7 +43,7 @@ class elt n ds = object (self)
         let t = Timer.play state'.last in
         let fs = if Timer.trigger t then begin
           Logger.log "%s finished %s\n" name state'.name;
-          let (desc, fs, last) = defaut_state state in
+          let (desc, fs, last) = default_state state in
           let fs' = state'.features in
           state <- { state = Some (mk_tile_state desc fs last) };
           Array.to_list fs'

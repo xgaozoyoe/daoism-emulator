@@ -1,4 +1,4 @@
 (library
   (name npc)
-  (libraries core)
+  (libraries core attribute)
 )

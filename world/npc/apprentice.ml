@@ -1,26 +1,11 @@
 open Core
-type wuxing =
-  | Jing (* 金 *)
-  | Mu   (* 木 *)
-  | Shui (* 水 *)
-  | Huo  (* 火 *)
-  | Tu   (* 土 *)
+
+module AttrApi = Attribute.Api
 
 type potential =
   | Wu (* 悟性 *)
   | Ji (* 机缘 *)
   | Qi (* 潜质 *)
-
-class wuXing wx = object (self)
-  method name = match wx with
-    | Jing -> "Jing"
-    | Mu -> "Mu"
-    | Shui -> "Shui"
-    | Huo -> "Huo"
-    | Tu -> "Tu"
-  method category = "WuXing"
-  method test (f:Attribute.t) = f#category = self#category
-end
 
 class growth p = object (self)
   method name = match p with
@@ -28,7 +13,7 @@ class growth p = object (self)
     | Ji -> "Ji"
     | Qi -> "Qi"
   method category = "Growth"
-  method test (f:Attribute.t) = f#category = self#category
+  method test (f:AttrApi.t) = f#category = self#category
 end
 
 let quality_to_total = function
@@ -39,6 +24,7 @@ let quality_to_total = function
 | Quality.Antique -> Random.int 200
 
 let make_basic_features total =
+  let open Attribute.WuXing in
   let ratio = [|Random.int 10; Random.int 10; Random.int 10; Random.int 10|] in
   let sum = Array.fold_left (fun acc c -> c + acc) 0 ratio in
   let ratio = Array.map (fun c -> (c * total) / sum) ratio in

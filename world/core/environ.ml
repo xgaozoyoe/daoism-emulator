@@ -1,5 +1,5 @@
 module ID = UID.Make(UID.Id)
-
+module Attribute = Attribute.Api
 module FeatureMap = Map.Make(ID)
 
 type elt = Attribute.t * int

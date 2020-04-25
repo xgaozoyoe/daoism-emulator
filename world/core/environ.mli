@@ -1,4 +1,5 @@
 module ID:UID.Interface
+module Attribute = Attribute.Api
 
 type t
 type elt = Attribute.t * int

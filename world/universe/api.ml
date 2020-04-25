@@ -9,7 +9,7 @@ class attrNPC attr_npc = object (self)
   method name = match attr_npc with
     | Apprentice -> "Apprentice"
   method category = "Npc"
-  method test (f:Core.Attribute.t) = f#category = self#category
+  method test (f:Attribute.Api.t) = f#category = self#category
 end
 
 

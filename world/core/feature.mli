@@ -1,3 +1,5 @@
+module Attribute = Attribute.Api
+
 type t =
   | Consume of Attribute.t * int
   | Produce of Attribute.t * int
