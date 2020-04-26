@@ -1,12 +1,12 @@
 open Core
 
-type dfs = (Feature.t * (Object.t ref option)) array
+type dfs = (Feature.t * (Object.t option)) array
 
 type npc_state = {
   name: string;
-  features: (Feature.t * (Object.t ref option)) array;
+  features: (Feature.t * (Object.t option)) array;
   last: Timer.time_slice;
-  tile: Object.t ref; (* position of the npc *)
+  tile: Object.t; (* position of the npc *)
 }
 
 type t = {
@@ -15,7 +15,7 @@ type t = {
 
 let mk_npc_state desc (fs:dfs) tile t = { name=desc; features=fs; tile=tile; last = t }
 
-class elt n ds (tile:Object.t ref) = object (self)
+class elt n ds (tile:Object.t) = object (self)
 
   inherit Object.elt n
 
@@ -43,7 +43,7 @@ class elt n ds (tile:Object.t ref) = object (self)
         let fs, events = Array.fold_left (fun (fs, events) (f, opt_target) ->
           match opt_target with
           | None -> (f::fs), events
-          | Some obj_ref -> fs, ((f, obj_ref) :: events);
+          | Some obj -> fs, ((f, obj) :: events);
         ) ([], []) fs in
         self#take_features @@ Array.of_list fs;
         events

@@ -9,7 +9,7 @@ type 'a rule = elt array * 'a
 
 type 'a t = {
   mutable features: elt FeatureMap.t;
-  rules: ('a rule) list;
+  mutable rules: ('a rule) list;
 }
 
 
@@ -22,7 +22,7 @@ let update_entry key cb_exist cb_none features =
   | Some v -> FeatureMap.add key v features
   | None -> features
 
-let empty = { features = FeatureMap.empty; rules = [] }
+let empty rules = { features = FeatureMap.empty; rules = rules }
 
 let fold f acc env = FeatureMap.fold f env.features acc
 
@@ -44,6 +44,9 @@ let proceed_feature feature env =
     env.features <- update_entry attr#id (fun _ ->
       Some (attr, amount)
     ) (fun _ -> Some (attr, amount)) env.features
+
+let install_rule (rule:'a) env =
+  env.rules <- rule :: env.rules
 
 let apply_rules env =
   let features, fires = List.fold_left (fun (env, fs) (attrs_require, r) ->

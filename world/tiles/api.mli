@@ -1,9 +1,10 @@
 open Core
 
 type coordinate
-type tile
-type map = (tile option) array
+type tile = Object.t
+type map
 
+val mk_cor: int -> int -> coordinate
 val mk_map: int -> int -> map
-val mk_tile: string -> tile
-val step: map -> Object.t ref -> (Feature.t * Object.t ref) list
+val get_tile: coordinate -> map -> tile option
+val step: map -> Object.t -> (Feature.t * Object.t) list

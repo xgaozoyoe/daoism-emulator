@@ -1,24 +1,25 @@
-let world = Universe.init Universe.default_config;;
+open Core
+let world: Object.t = Universe.init Universe.default_config;;
 
-let _ = world#step (ref world) in
-let _ = world#step (ref world) in
-let _ = world#step (ref world) in
-let _ = world#step (ref world) in
-let _ = world#step (ref world) in
-let _ = world#step (ref world) in
-let _ = world#step (ref world) in
-let _ = world#step (ref world) in
-let _ = world#step (ref world) in
-let _ = world#step (ref world) in
-let _ = world#step (ref world) in
-let _ = world#step (ref world) in
-let _ = world#step (ref world) in
-let _ = world#step (ref world) in
-let _ = world#step (ref world) in
-let _ = world#step (ref world) in
-let _ = world#step (ref world) in
-let _ = world#step (ref world) in
-let _ = world#step (ref world) in
-world#step (ref world);;
+let _ = world#step world in
+let _ = world#step world in
+let _ = world#step world in
+let _ = world#step world in
+let _ = world#step world in
+let _ = world#step world in
+let _ = world#step world in
+let _ = world#step world in
+let _ = world#step world in
+let _ = world#step world in
+let _ = world#step world in
+let _ = world#step world in
+let _ = world#step world in
+let _ = world#step world in
+let _ = world#step world in
+let _ = world#step world in
+let _ = world#step world in
+let _ = world#step world in
+let _ = world#step world in
+world#step world;;
 
 

@@ -1,13 +1,12 @@
 open Core
 
-module Apprentice = Npc.Apprentice
 module Npc = Npc.Api
 
 type coordinate = int * int
 
 type state = {
   name: string;
-  features: (Feature.t * (Object.t ref option)) array;
+  features: (Feature.t * (Object.t option)) array;
   last: Timer.time_slice;
 }
 
@@ -30,8 +29,11 @@ class elt n ds = object (self)
     let desc, fs, t = ds { state = None } in
     { state = Some (mk_tile_state desc fs t) }
 
-  method step _ : (Feature.t * Object.t ref) list = begin
+  method step _ : (Feature.t * Object.t) list = begin
     let spawn_events = Environ.apply_rules self#get_env in
+    Logger.log "%s spawn events: %s\n" name
+        (List.fold_left (fun acc (c,obj) ->
+            acc ^ " " ^ Feature.to_string c ^ "|->" ^ obj#get_name) "" spawn_events);
     let step_events = match state.state with
     | Some state' -> begin
         let t = Timer.play state'.last in
@@ -51,7 +53,7 @@ class elt n ds = object (self)
         let fs, events = List.fold_left (fun (fs, events) (f, opt_target) ->
           match opt_target with
           | None -> (f::fs), events
-          | Some obj_ref -> fs, ((f, obj_ref) :: events);
+          | Some obj -> fs, ((f, obj) :: events);
         ) ([], []) fs in
         self#take_features @@ Array.of_list fs;
         events
@@ -63,21 +65,36 @@ end
 
 type tile = Object.t
 
-type map = (tile option) array
+type map = {
+  tiles: (tile option) array;
+  width: int;
+  height: int;
+}
 
 let mk_tile name : tile =
   let dfst = Default.make_state Quality.Normal 200 in
-  new elt name (Default.make_state dfst (Timer.of_int 10))
+  new elt name (Default.make_state dfst (Timer.of_int 4))
 
-let mk_map width height : map =
-  let map = Array.make (width * height) None in
+let mk_map width height: map =
+  let map = {
+    tiles = Array.make (width * height) None;
+    width = width;
+    height = height;
+  } in
   for i = 0 to (width * height - 1) do
-    map.(i) <- Some (mk_tile (Printf.sprintf "t%d" i))
+    let tile = mk_tile (Printf.sprintf "t%d" i) in
+    map.tiles.(i) <- Some tile
   done;
   map
+
+let mk_cor left top = (left,top)
+
+let get_tile (cor:coordinate) map =
+  let (top, left) = cor in
+  map.tiles.(top * map.width + left)
 
 let step map universe =
    Array.fold_left (fun acc m -> match m with
    | None -> acc
    | Some m -> acc @ m#step universe
-   ) [] map
+   ) [] map.tiles

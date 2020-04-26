@@ -1,12 +1,12 @@
 type t = {
-  src: Object.t ref;
-  target: Object.t ref;
+  src: Object.t;
+  target: Object.t;
   feature: Feature.t;
 }
 
-let get_source t = !(t.src)
+let get_source t = t.src
 
-let get_target t = !(t.target)
+let get_target t = t.target
 
 let get_feature t = t.feature
 

@@ -1,8 +1,14 @@
 module AttributeWuXing = Core.Attribute.From(Attribute.WuXing)
 module AttributeBase = Core.Attribute.From(Attribute.Base)
+module AttributeNpc = Core.Attribute.From(Attribute.Npc)
 
+open Core
+let apprentice_rule oref : (Feature.t * Object.t) Environ.rule =
+    let apprentice = new AttributeNpc.ext_attr Apprentice in
+    [| new AttributeWuXing.ext_attr Jing, 2 |]
+    , (Feature.mk_produce apprentice 1, oref)
 
-open Core.Quality
+open Quality
 let quality_to_total = function
 | Unique -> 200
 | Rare -> 150
