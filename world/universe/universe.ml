@@ -21,12 +21,16 @@ class elt n = object(self)
   val objs:(Object.ID.t, Object.t) Hashtbl.t = Hashtbl.create 10
 
   method step oref = begin
-    ignore @@ Tiles.step tiles oref;
+    let tile_events = Tiles.step tiles oref in
     let events = Hashtbl.fold (fun _ v acc ->
       let new_events = List.map (fun (f, t) -> Event.mk_event v t f) (v#step oref) in
       new_events @ acc
     ) objs [] in
-    List.iter (fun e -> Printf.printf "[event:] %s\n" (Event.to_string e)) events;
+    let my_events, deliver_events =
+      List.partition (fun e -> (Event.get_target e)#get_name = self#get_name)
+      (tile_events @ events) in
+    List.iter (fun e -> Printf.printf "[ my event: %s ]\n" (Event.to_string e)) my_events;
+    List.iter (fun e -> Printf.printf "[ deliver event: %s ]\n" (Event.to_string e)) deliver_events;
     []
   end
 

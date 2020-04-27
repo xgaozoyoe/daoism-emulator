@@ -31,9 +31,6 @@ class elt n ds = object (self)
 
   method step _ : (Feature.t * Object.t) list = begin
     let spawn_events = Environ.apply_rules self#get_env in
-    Logger.log "%s spawn events: %s\n" name
-        (List.fold_left (fun acc (c,obj) ->
-            acc ^ " " ^ Feature.to_string c ^ "|->" ^ obj#get_name) "" spawn_events);
     let step_events = match state.state with
     | Some state' -> begin
         let t = Timer.play state'.last in
@@ -42,7 +39,7 @@ class elt n ds = object (self)
           let fs' = state'.features in
           Logger.log "%s finished %s and produce: %s\n" name state'.name
             (Array.fold_left (fun acc (c,_) -> acc ^ " " ^ Feature.to_string c) "" fs');
-          Logger.log "%s\n" (Environ.dump self#get_env);
+          Logger.log "[ local_env: %s ]\n" (Environ.dump self#get_env);
           state <- { state = Some (mk_tile_state desc fs last) };
           Array.to_list fs'
         end else begin
@@ -82,7 +79,7 @@ let mk_map width height: map =
     height = height;
   } in
   for i = 0 to (width * height - 1) do
-    let tile = mk_tile (Printf.sprintf "t%d" i) in
+    let tile = mk_tile (Printf.sprintf "tile_%d" i) in
     map.tiles.(i) <- Some tile
   done;
   map
@@ -96,5 +93,6 @@ let get_tile (cor:coordinate) map =
 let step map universe =
    Array.fold_left (fun acc m -> match m with
    | None -> acc
-   | Some m -> acc @ m#step universe
+   | Some m -> acc @
+       (List.map (fun (f,o) -> Event.mk_event m o f) (m#step universe))
    ) [] map.tiles
