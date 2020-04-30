@@ -7,4 +7,4 @@ type map
 val mk_cor: int -> int -> coordinate
 val mk_map: int -> int -> map
 val get_tile: coordinate -> map -> tile option
-val step: map -> Object.t -> Event.t list
+val step: map -> Object.t -> Event.t list Lwt.t

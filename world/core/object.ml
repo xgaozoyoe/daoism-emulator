@@ -4,7 +4,7 @@ type t = <
   get_name: string;
   get_env: (Feature.t * t)  Environ.t;
   take_features: Feature.t array -> unit;
-  step: t -> (Feature.t * t) list
+  step: t -> (Feature.t * t) list Lwt.t
 >
 
 type ('a, 'b) state_trans =
@@ -26,5 +26,5 @@ class virtual elt n = object
        Environ.proceed_feature f env
     ) features
 
-  method virtual step: t -> (Feature.t * t) list
+  method virtual step: t -> (Feature.t * t) list Lwt.t
 end

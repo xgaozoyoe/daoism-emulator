@@ -1,4 +1,5 @@
 open Core
+open Lwt.Syntax
 
 type dfs = (Feature.t * (Object.t option)) array
 
@@ -29,16 +30,17 @@ class elt n ds (tile:Object.t) = object (self)
     match state.state with
     | Some state' -> begin
         let t = Timer.play state'.last in
-        let fs = if Timer.trigger t then begin
-          Logger.log "%s finished %s\n" name state'.name;
+        let* fs = if Timer.trigger t then begin
+          let* _ = Logger.log "%s finished %s\n" name state'.name in
           let (desc, fs, last) = default_state state in
           let tile' = state'.tile in
           let fs' = state'.features in
           state <- { state = Some (mk_npc_state desc fs tile' last) };
-          fs'
+          Lwt.return fs'
         end else begin
           state <- { state = Some {state' with last = t} };
-          [||]
+          let* _ = Logger.log "%s tick %s, remain: %s\n" name state'.name (Timer.to_string t) in
+          Lwt.return [||]
         end in
         let fs, events = Array.fold_left (fun (fs, events) (f, opt_target) ->
           match opt_target with
@@ -46,8 +48,8 @@ class elt n ds (tile:Object.t) = object (self)
           | Some obj -> fs, ((f, obj) :: events);
         ) ([], []) fs in
         self#take_features @@ Array.of_list fs;
-        events
+        Lwt.return events
       end
-    | None -> []
+    | None -> Lwt.return []
   end
 end

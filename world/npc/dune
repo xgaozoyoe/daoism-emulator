@@ -1,4 +1,4 @@
 (library
   (name npc)
-  (libraries core attribute)
+  (libraries core attribute lwt conduit-lwt-unix)
 )

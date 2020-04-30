@@ -1,1 +1,1 @@
-let log = Printf.printf
+let log = Lwt_io.printf

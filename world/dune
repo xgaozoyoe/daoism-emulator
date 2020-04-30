@@ -1,4 +1,4 @@
 (executable
  (name main)
- (libraries core npc tiles universe)
+ (libraries core npc tiles universe lwt conduit-lwt-unix lwt_ppx)
 )

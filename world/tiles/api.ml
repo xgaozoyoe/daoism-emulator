@@ -1,4 +1,5 @@
 open Core
+open Lwt.Syntax
 
 module Npc = Npc.Api
 
@@ -29,23 +30,23 @@ class elt n ds = object (self)
     let desc, fs, t = ds { state = None } in
     { state = Some (mk_tile_state desc fs t) }
 
-  method step _ : (Feature.t * Object.t) list = begin
-    let spawn_events = Environ.apply_rules self#get_env in
-    let step_events = match state.state with
+  method step _  = begin
+    let* spawn_events = Lwt.return @@ Environ.apply_rules self#get_env in
+    let* step_events = match state.state with
     | Some state' -> begin
         let t = Timer.play state'.last in
-        let fs = if Timer.trigger t then begin
+        let* fs = if Timer.trigger t then begin
           let (desc, fs, last) = default_state state in
           let fs' = state'.features in
-          Logger.log "%s finished %s and produce: %s\n" name state'.name
-            (Array.fold_left (fun acc (c,_) -> acc ^ " " ^ Feature.to_string c) "" fs');
-          Logger.log "[ local_env: %s ]\n" (Environ.dump self#get_env);
+          let* _ = Logger.log "%s finished %s and produce: %s\n" name state'.name
+            (Array.fold_left (fun acc (c,_) -> acc ^ " " ^ Feature.to_string c) "" fs') in
+          let* _ = Logger.log "[ local_env: %s ]\n" (Environ.dump self#get_env) in
           state <- { state = Some (mk_tile_state desc fs last) };
-          Array.to_list fs'
+          Lwt.return @@ Array.to_list fs'
         end else begin
-          Logger.log "%s tick %s, remain: %s\n" name state'.name (Timer.to_string t);
+          let* _ = Logger.log "%s tick %s, remain: %s\n" name state'.name (Timer.to_string t) in
           state <- { state = Some {state' with last = t} };
-          []
+          Lwt.return @@ []
         end in
         let fs, events = List.fold_left (fun (fs, events) (f, opt_target) ->
           match opt_target with
@@ -53,10 +54,10 @@ class elt n ds = object (self)
           | Some obj -> fs, ((f, obj) :: events);
         ) ([], []) fs in
         self#take_features @@ Array.of_list fs;
-        events
+        Lwt.return events
       end
-    | None -> []
-    in spawn_events @ step_events
+    | None -> Lwt.return []
+    in Lwt.return (spawn_events @ step_events)
   end
 end
 
@@ -91,8 +92,10 @@ let get_tile (cor:coordinate) map =
   map.tiles.(top * map.width + left)
 
 let step map universe =
-   Array.fold_left (fun acc m -> match m with
-   | None -> acc
-   | Some m -> acc @
-       (List.map (fun (f,o) -> Event.mk_event m o f) (m#step universe))
-   ) [] map.tiles
+   Lwt_list.fold_left_s (fun acc m -> match m with
+   | None -> Lwt.return acc
+   | Some m ->
+       let* fs = m#step universe in
+       let* es = (Lwt_list.map_s (fun (f,o) -> Lwt.return (Event.mk_event m o f)) fs) in
+       Lwt.return (acc @ es)
+   ) [] (Array.to_list map.tiles)

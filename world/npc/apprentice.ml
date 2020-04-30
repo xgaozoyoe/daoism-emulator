@@ -19,7 +19,7 @@ let quality_to_total = function
 let make_basic_features total =
   let open Core in
   let open AttributeWuXing in
-  let ratio = [|Random.int 10; Random.int 10; Random.int 10; Random.int 10|] in
+  let ratio = [|Random.int 10; Random.int 10; Random.int 10; Random.int 10; Random.int 10|] in
   let sum = Array.fold_left (fun acc c -> c + acc) 0 ratio in
   let ratio = Array.map (fun c -> (c * total) / sum) ratio in
   let wx = [|
@@ -36,3 +36,5 @@ let make_state quality timeslice = fun _ ->
   let features_array =
     Array.map (fun x-> x, None) (make_basic_features (quality_to_total quality)) in
   (spawn, features_array, timeslice)
+
+let mk_apprentice tile = new Api.elt "Apprentice" (make_state Quality.Normal (Timer.of_int 10)) tile
