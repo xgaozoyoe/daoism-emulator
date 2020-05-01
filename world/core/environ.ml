@@ -1,4 +1,4 @@
-module ID = UID.Make(UID.Id)
+module ID = UID.UID
 module FeatureMap = Map.Make(ID)
 
 exception NotEnough
@@ -44,6 +44,11 @@ let proceed_feature feature env =
     env.features <- update_entry attr#id (fun _ ->
       Some (attr, amount)
     ) (fun _ -> Some (attr, amount)) env.features
+
+let filter_feature category env =
+  List.filter_map (fun (_, (attr,_)) ->
+    if attr#category == category then Some attr
+    else None) (List.of_seq (FeatureMap.to_seq env.features))
 
 let install_rule (rule:'a) env =
   env.rules <- rule :: env.rules

@@ -38,3 +38,4 @@ module Make (T: Interface) : Interface = struct
 
 end
 
+module UID = Make (Id)

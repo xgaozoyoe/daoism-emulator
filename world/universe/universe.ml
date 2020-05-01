@@ -19,11 +19,11 @@ class elt n = object(self)
 
   val mutable tiles: Tiles.map = Tiles.mk_map 2 2
   val mutable events: Event.t list = []
-  val objs:(ID.t, Object.t) Hashtbl.t = Hashtbl.create 10
+  val npcs:(ID.t, Object.t) Hashtbl.t = Hashtbl.create 10
 
   method step oref = begin
     let* tile_events = Tiles.step tiles oref in
-    let seq = List.of_seq @@ Hashtbl.to_seq objs in
+    let seq = List.of_seq @@ Hashtbl.to_seq npcs in
     let* events = Lwt_list.fold_left_s (fun acc (_, v) ->
       let* es = v#step oref in
       let* new_events = Lwt_list.map_s (fun (f, t) -> Lwt.return (Event.mk_event v t f)) es in
@@ -38,9 +38,9 @@ class elt n = object(self)
       let feature = Event.get_feature e in
       match feature with
       | Feature.Produce (attr, _) -> begin
-          if attr#category = "Npc" then
+          if attr#category = "Spawn" then
             let obj = Apprentice.mk_apprentice (Event.get_source e) in
-            Hashtbl.add objs (ID.of_string obj#get_name) obj
+            Hashtbl.add npcs (ID.of_string obj#get_name) (obj:>Object.t)
           else ()
         end
       | _ -> ()

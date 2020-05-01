@@ -9,4 +9,5 @@ val proceed_feature: Feature.t -> 'a t -> unit
 val fold: (ID.t -> (Attribute.t * int) -> 'a -> 'a)  -> 'a -> 'a t -> 'a
 val install_rule: 'a rule -> 'a t -> unit
 val apply_rules: 'a t -> 'a list
+val filter_feature: string -> 'a t -> Attribute.t list
 val dump: 'a t -> string

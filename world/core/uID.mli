@@ -5,6 +5,8 @@ module type Interface = sig
   val of_string: string -> t
 end
 
-module Id : Interface
+module Id: Interface
 
 module Make (U:Interface) : Interface
+
+module UID: Interface

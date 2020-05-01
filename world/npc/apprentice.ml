@@ -1,11 +1,12 @@
 module AttributeWuXing = Core.Attribute.From(Attribute.WuXing)
 module AttributeBase = Core.Attribute.From(Attribute.Base)
-module AttributeNpc = Core.Attribute.From(Attribute.Npc)
+module AttributeSpawn = Core.Attribute.From(Attribute.Spawn)
+module AttributeMove = Core.Attribute.From(Attribute.Move)
 
 open Core
 let apprentice_rule oref : (Feature.t * Object.t) Environ.rule =
-    let apprentice = new AttributeNpc.ext_attr Apprentice in
-    [| new AttributeWuXing.ext_attr Jing, 2 |]
+    let apprentice = new AttributeSpawn.ext_attr Apprentice in
+    [| new AttributeWuXing.ext_attr Jing, 10 |]
     , (Feature.mk_produce apprentice 1, oref)
 
 open Quality
@@ -31,10 +32,19 @@ let make_basic_features total =
   |] in
   Array.map2 (fun amount wx -> Feature.mk_produce wx amount) ratio wx
 
-let make_state quality timeslice = fun _ ->
-  let spawn = "Spawn" in
-  let features_array =
-    Array.map (fun x-> x, None) (make_basic_features (quality_to_total quality)) in
-  (spawn, features_array, timeslice)
+let practise_state quality =
+   ("修炼", Array.map (fun x-> x, None) (make_basic_features (quality_to_total quality)), Timer.of_int 10)
 
-let mk_apprentice tile = new Api.elt "Apprentice" (make_state Quality.Normal (Timer.of_int 10)) tile
+let explore_state universe =
+   ("探索", [|Feature.mk_produce (new AttributeMove.ext_attr Left) 1, Some universe|], Timer.of_int 5)
+
+let make_state quality = fun (_,s) ->
+  let pick = Random.int 2 in
+  match pick with
+    | 1 -> practise_state quality
+    | 0 -> explore_state s
+    | _ -> assert false
+
+let mk_apprentice tile =
+    let name = Core.Name.gen_name "Apprentice" in
+    new Api.elt name (make_state Quality.Normal) tile

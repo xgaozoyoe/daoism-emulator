@@ -1,5 +1,4 @@
-module ID:UID.Interface
-
+open UID
 type t = <
   get_name: string;
   get_env: (Feature.t * t) Environ.t;
@@ -9,7 +8,7 @@ type t = <
 
 class virtual elt: string -> object
   val name: string
-  val uid: ID.t
+  val uid: UID.t
   val mutable env: (Feature.t * t) Environ.t
   val mutable modifier: Modifier.t list
   method get_name: string
@@ -20,3 +19,7 @@ end
 
 type ('a, 'b) state_trans =
   'a -> 'b * (Feature.t * (t option)) array * Timer.time_slice
+
+type obj_map = {
+  get_obj: UID.t -> t
+}

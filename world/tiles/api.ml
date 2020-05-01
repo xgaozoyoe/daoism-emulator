@@ -44,7 +44,6 @@ class elt n ds = object (self)
           state <- { state = Some (mk_tile_state desc fs last) };
           Lwt.return @@ Array.to_list fs'
         end else begin
-          let* _ = Logger.log "%s tick %s, remain: %s\n" name state'.name (Timer.to_string t) in
           state <- { state = Some {state' with last = t} };
           Lwt.return @@ []
         end in
@@ -61,17 +60,16 @@ class elt n ds = object (self)
   end
 end
 
-type tile = Object.t
-
 type map = {
-  tiles: (tile option) array;
+  tiles: (Object.t option) array;
   width: int;
   height: int;
 }
 
-let mk_tile name : tile =
-  let dfst = Default.make_state Quality.Normal 200 in
-  new elt name (Default.make_state dfst (Timer.of_int 4))
+let mk_tile name =
+  let tile = Default.tile_type_array.(Random.int 4) in
+  let quality = Quality.Normal in
+  new elt name (Default.make_state quality tile (Timer.of_int 4))
 
 let mk_map width height: map =
   let map = {
@@ -99,3 +97,14 @@ let step map universe =
        let* es = (Lwt_list.map_s (fun (f,o) -> Lwt.return (Event.mk_event m o f)) fs) in
        Lwt.return (acc @ es)
    ) [] (Array.to_list map.tiles)
+
+class tile_attr (obj:Object.t) = object
+  inherit Attribute.attr
+  method name = obj#get_name
+  method category = "Tile"
+end
+
+let mk_tile_attr t: Attribute.t = (new tile_attr t :> Attribute.t)
+
+
+

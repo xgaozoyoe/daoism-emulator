@@ -1,5 +1,4 @@
-module ID = UID.Make(UID.Id)
-
+open UID
 type t = <
   get_name: string;
   get_env: (Feature.t * t)  Environ.t;
@@ -13,7 +12,7 @@ type ('a, 'b) state_trans =
 class virtual elt n = object
 
   val name = n
-  val uid = ID.of_string n
+  val uid = UID.of_string n
   val mutable env: (Feature.t * t) Environ.t = Environ.empty []
   val mutable modifier: Modifier.t list = []
 
@@ -28,3 +27,7 @@ class virtual elt n = object
 
   method virtual step: t -> (Feature.t * t) list Lwt.t
 end
+
+type obj_map = {
+  get_obj: UID.t -> t
+}
