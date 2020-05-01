@@ -2,8 +2,10 @@ open UID
 type t = <
   get_name: string;
   get_env: (Feature.t * t) Environ.t;
+  get_command: Attribute.t option;
+  set_command: Attribute.t option -> unit;
   take_features: Feature.t array -> unit;
-  step: t -> (Feature.t * t) list Lwt.t
+  step: t -> t Space.t -> (Feature.t * t) list Lwt.t
 >
 
 class virtual elt: string -> object
@@ -14,11 +16,12 @@ class virtual elt: string -> object
   method get_name: string
   method take_features: Feature.t array -> unit
   method get_env: (Feature.t * t) Environ.t
-  method virtual step: t -> (Feature.t * t) list Lwt.t
+  method get_command: Attribute.t option
+  method set_command: Attribute.t option -> unit
+  method virtual step: t -> t Space.t -> (Feature.t * t) list Lwt.t
 end
 
-type ('a, 'b) state_trans =
-  'a -> 'b * (Feature.t * (t option)) array * Timer.time_slice
+type 'a state_trans = 'a * t -> 'a
 
 type obj_map = {
   get_obj: UID.t -> t

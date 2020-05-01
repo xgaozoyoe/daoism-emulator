@@ -15,17 +15,25 @@ class elt n ds (tile:Object.t) = object (self)
 
   inherit Object.elt n
 
-  val mutable state_trans : ((npc_state * Object.t), string) Object.state_trans = ds
+  val mutable state_trans : npc_state Object.state_trans = ds
 
   val mutable state = {features=[||]; last=Timer.of_int 1; tile=tile; description="诞生"}
 
-  method step universe = begin
+  val mutable tile = tile
+
+  method step universe _ = begin
+    (*let* spawn_events = Lwt.return @@ Environ.apply_rule self#get_env in
+    let* state_commands =
+    *)
+
     let t = Timer.play state.last in
     let* fs = if Timer.trigger t then begin
       let* _ = Logger.log "%s 完成了 %s\n" name state.description in
-      let (desc, fs, last) = state_trans (state, universe) in
       let fs' = state.features in
-      state <- { state with features = fs; last = last; description = desc};
+      (* Update the current tile *)
+      let ns = state_trans (state, universe) in
+      tile <- state.tile;
+      state <- ns;
       Lwt.return fs'
     end else begin
       let* _ = Logger.log "%s 正在 %s\n" name state.description in

@@ -3,11 +3,12 @@ open Lwt.Infix
 open Websocket
 open Websocket_lwt_unix
 
-let world: Object.t = Universe.init Universe.default_config;;
+let world = Universe.init Universe.default_config;;
 
 let rec step _ : unit Lwt.t =
   Lwt_unix.sleep 1.0 >>= fun _ ->
-  Lwt.return @@ world#step world >>= fun _ ->
+  Lwt.return @@ world#step
+    (world:>Object.t) world#space >>= fun _ ->
   step ()
 in
 
