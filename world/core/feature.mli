@@ -8,4 +8,5 @@ val mk_consume: Attribute.t -> int -> t
 val mk_hold: Attribute.t -> int -> t
 
 val to_string: t -> string
+val to_json: t -> Yojson.Basic.t
 

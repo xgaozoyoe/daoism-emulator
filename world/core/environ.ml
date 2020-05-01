@@ -12,7 +12,6 @@ type 'a t = {
   mutable rules: ('a rule) list;
 }
 
-
 let update_entry key cb_exist cb_none features =
   let v = match FeatureMap.find_opt key features with
   | None -> cb_none ()
@@ -26,9 +25,29 @@ let empty rules = { features = FeatureMap.empty; rules = rules }
 
 let fold f acc env = FeatureMap.fold f env.features acc
 
-let dump env = FeatureMap.fold (fun _ (attr,i) acc ->
+let dump env =
+  let c = FeatureMap.fold (fun _ (attr,i) acc ->
     acc ^ " " ^ (Printf.sprintf "%s |-> %d" (attr#name) i)
-  ) env.features ""
+  ) env.features "" in
+  List.fold_left (fun acc (attrs, _) ->
+    let require = Array.fold_left (fun acc (attr,i) ->
+      Printf.sprintf "%s , %s : %d" acc attr#name i
+    ) "" attrs in
+    acc ^ ", <" ^ require ^ ">"
+  ) c env.rules
+
+let to_json env =
+  let fs = FeatureMap.fold (fun _ (attr,i) acc ->
+    acc @ [(attr#name, `Int i)]
+  ) env.features [] in
+  let rules = List.fold_left (fun acc (attrs, _) ->
+    let require = Array.fold_left (fun acc (attr,i) ->
+      acc @ [(attr#name, `Int i)]
+    ) [] attrs in
+    acc @ [`Assoc require]
+  ) [] env.rules in
+  `Assoc [("Features", `Assoc fs); ("Rules", `List rules)]
+
 
 let proceed_feature feature env =
   match feature with

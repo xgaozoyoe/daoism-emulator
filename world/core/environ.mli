@@ -11,3 +11,4 @@ val install_rule: 'a rule -> 'a t -> unit
 val apply_rules: 'a t -> 'a list
 val filter_feature: string -> 'a t -> Attribute.t list
 val dump: 'a t -> string
+val to_json: 'a t -> Yojson.Basic.t

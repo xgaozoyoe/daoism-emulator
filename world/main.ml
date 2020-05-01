@@ -43,7 +43,9 @@ let handler id client =
       | Opcode.Pong -> Lwt.return_unit
 
       | Opcode.Text
-      | Opcode.Binary -> send @@ Frame.create ~content:"OK" ()
+      | Opcode.Binary ->
+        Lwt.return (Yojson.Basic.to_string (world#to_json)) >>= fun ctx ->
+        send @@ Frame.create ~content:ctx ()
 
       | _ ->
         send @@ Frame.close 1002 >>= fun () ->
@@ -62,12 +64,12 @@ let main uri =
   Resolver_lwt.resolve_uri ~uri Resolver_lwt_unix.system >>= fun endp ->
   let open Conduit_lwt_unix in
   endp_to_server ~ctx:default_ctx endp >>= fun server ->
-  establish_server ~ctx:default_ctx ~mode:server (handler @@ ref (-1))
+  establish_server ~ctx:default_ctx ~check_request:(fun _ -> true) ~mode:server (handler @@ ref (-1))
 
 in
 
 let () =
-  let uri = ref "http://localhost:9001" in
+  let uri = ref "http://0.0.0.0:9001" in
 
   let speclist = Arg.align
       [

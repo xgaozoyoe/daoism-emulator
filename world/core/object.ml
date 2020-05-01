@@ -5,10 +5,11 @@ type t = <
   get_command: Attribute.t option;
   set_command: Attribute.t option -> unit;
   take_features: Feature.t array -> unit;
+  to_json: Yojson.Basic.t;
   step: t -> t Space.t -> (Feature.t * t) list Lwt.t
 >
 
-type 'a state_trans = 'a * t -> 'a
+type 'a state_trans = 'a * t * t Space.t -> 'a
 class virtual elt n = object
 
   val name = n
@@ -27,9 +28,21 @@ class virtual elt n = object
        Environ.proceed_feature f env
     ) features
 
+  method virtual to_json: Yojson.Basic.t
   method virtual step: t -> t Space.t -> (Feature.t * t) list Lwt.t
 end
 
 type obj_map = {
   get_obj: UID.t -> t
 }
+
+type pre_event = Feature.t * (t option)
+
+let pre_event_to_json pe =
+  let f, obj_opt = pe in
+  let cs = ("feature", Feature.to_json f) in
+  let cs = match obj_opt with
+    | None -> [cs]
+    | Some obj -> cs :: [("target", `String obj#get_name)]
+  in
+  `Assoc cs

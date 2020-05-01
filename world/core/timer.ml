@@ -13,3 +13,4 @@ let play slice =
 let trigger slice = (slice = 0)
 
 let to_string t = string_of_int t
+let to_json t = `Int t

@@ -1,4 +1,4 @@
 (library
   (name npc)
-  (libraries core attribute lwt conduit-lwt-unix)
+  (libraries core attribute lwt conduit-lwt-unix ppx_deriving_yojson)
 )

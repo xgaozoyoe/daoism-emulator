@@ -11,6 +11,15 @@ type npc_state = {
   tile: Object.t; (* position of the npc *)
 }
 
+let npc_state_to_json ns =
+  `Assoc [
+    ("description", `String ns.description)
+    ; ("features", `List (List.map (fun pre -> Object.pre_event_to_json pre)
+        (Array.to_list ns.features)))
+    ; ("last", Timer.to_json ns.last)
+    ; ("tile", `String ns.tile#get_name)
+   ]
+
 class elt n ds (tile:Object.t) = object (self)
 
   inherit Object.elt n
@@ -21,7 +30,13 @@ class elt n ds (tile:Object.t) = object (self)
 
   val mutable tile = tile
 
-  method step universe _ = begin
+  method to_json = `Assoc [
+    ("name",`String self#get_name)
+    ; ("state", npc_state_to_json state)
+    ; ("env", Environ.to_json self#get_env)
+  ]
+
+  method step universe space = begin
     (*let* spawn_events = Lwt.return @@ Environ.apply_rule self#get_env in
     let* state_commands =
     *)
@@ -31,7 +46,7 @@ class elt n ds (tile:Object.t) = object (self)
       let* _ = Logger.log "%s 完成了 %s\n" name state.description in
       let fs' = state.features in
       (* Update the current tile *)
-      let ns = state_trans (state, universe) in
+      let ns = state_trans (state, universe, space) in
       tile <- state.tile;
       state <- ns;
       Lwt.return fs'

@@ -14,7 +14,7 @@ let mk_tile_attr t: Attribute.t = (new tile_attr t :> Attribute.t)
 
 let apprentice_rule oref : (Feature.t * Object.t) Environ.rule =
     let apprentice = new AttributeSpawn.ext_attr Apprentice in
-    [| new AttributeWuXing.ext_attr Jing, 10 |]
+    [| new AttributeWuXing.ext_attr Jing, 3 |]
     , (Feature.mk_produce apprentice 1, oref)
 
 open Quality
@@ -65,9 +65,12 @@ let move_state state tile =
      tile = state.tile
    }
 
-let make_state quality = fun (state,s) ->
-  let pick = Random.int 2 in
+let make_state quality = fun (state,s,space) ->
+  let pick = Random.int 3 in
+  let open Space in
   match pick with
+    | 2 -> move_state state
+        (Option.get @@ space.pick_from_coordinate Space.mk_rand_cor)
     | 1 -> practise_state quality state
     | 0 -> explore_state state s
     | _ -> assert false

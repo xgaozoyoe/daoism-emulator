@@ -19,3 +19,9 @@ let to_string b = match b with
       (attr#name) n
   | Hold (attr, n) -> Printf.sprintf "<%s: Hold %d>"
       (attr#name) n
+
+let to_json b : Yojson.Basic.t =
+  match b with
+  | Consume (attr, n) -> `Assoc [("Consume", `String attr#name); ("Amount", `Int n)]
+  | Produce (attr, n) -> `Assoc [("Produce", `String attr#name); ("Amount", `Int n)]
+  | Hold (attr, n) -> `Assoc [("Hold", `String attr#name); ("Amount", `Int n)]

@@ -16,7 +16,7 @@ let to_string = function
 
 let tile_type_array = [|Mountain; River; Grassland; Cave|]
 
-let make_default_state _ ttyp timeslice = fun (_, _) ->
+let make_default_state _ ttyp timeslice = fun (_, _, _) ->
   let open Core in
   let open AttributeWuXing in
   let name = to_string ttyp in
