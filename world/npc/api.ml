@@ -1,24 +1,12 @@
-open Core
 open Lwt.Syntax
+
+module AttributeDamage = Core.Attribute.From(Attribute.Damage)
+module DamageAttr = Attribute.Damage
+
+open Core
 open UID
-
-type dfs = Object.t -> (Feature.t * (Object.t option)) array
-
-type npc_state = {
-  description: string;
-  features: (Feature.t * (Object.t option)) array;
-  last: Timer.time_slice;
-  tile: Object.t; (* position of the npc *)
-}
-
-let npc_state_to_json ns =
-  `Assoc [
-    ("description", `String ns.description)
-    ; ("features", `List (List.map (fun pre -> Object.pre_event_to_json pre)
-        (Array.to_list ns.features)))
-    ; ("last", Timer.to_json ns.last)
-    ; ("tile", `String ns.tile#get_name)
-   ]
+open Attr
+open Common
 
 class elt n ds (tile:Object.t) = object (self)
 
@@ -26,15 +14,36 @@ class elt n ds (tile:Object.t) = object (self)
 
   val mutable state_trans : npc_state Object.state_trans = ds
 
-  val mutable state = {features=[||]; last=Timer.of_int 1; tile=tile; description="诞生"}
+  val mutable state = {
+    features=[|Feature.mk_hold (mk_status_attr "enter") 1, Some tile|];
+    last=Timer.of_int 1; tile=tile; description="诞生"
+  }
 
   val mutable tile = tile
+  val mutable health = 10
 
   method to_json = `Assoc [
     ("name",`String self#get_name)
     ; ("state", npc_state_to_json state)
     ; ("env", Environ.to_json self#get_env)
   ]
+
+
+  method handle_event universe src feature = begin
+    match feature with
+    | Produce (attr, dmg) when attr#test "Damage" ->
+      let src = src.(0) in
+      let* _ = Lwt_io.printf "%s 受到了来自 %s 的 %d 点攻击\n"
+        self#get_name src#get_name dmg in
+      health <- health - dmg;
+      if health <= 0 then state <- Common.dead_state tile universe;
+      Lwt.return []
+    | Hold (attr, _) when attr#test "Adjacent" ->
+      Lwt.return [Feature.mk_produce
+        (* FIXME: src might be empty ? *)
+        (new AttributeDamage.ext_attr DamageAttr.Straight) 1, [|(self :> Object.t)|], src.(0)]
+    | _ -> Lwt.return []
+  end
 
   method step universe space = begin
     (*let* spawn_events = Lwt.return @@ Environ.apply_rule self#get_env in
@@ -51,29 +60,20 @@ class elt n ds (tile:Object.t) = object (self)
       state <- ns;
       Lwt.return fs'
     end else begin
-      let* _ = Logger.log "%s 正在 %s\n" name state.description in
+      let* _ = Logger.log "%s (hp: %d) 正在 %s\n" name health state.description in
       state <- { state with last = t};
       Lwt.return [||]
     end in
     let fs, events = Array.fold_left (fun (fs, events) (f, opt_target) ->
       match opt_target with
       | None -> (f::fs), events
-      | Some obj -> fs, ((f, obj) :: events);
+      | Some obj -> fs, ((f, [|(self:>Object.t)|], obj) :: events);
     ) ([], []) fs in
     self#take_features @@ Array.of_list fs;
     let* _ = Logger.log "[ local_env: %s ]\n" (Environ.dump self#get_env) in
     Lwt.return events
   end
 end
-
-
-class npc_attr (obj:Object.t) = object
-  inherit Attribute.attr
-  method name = obj#get_name
-  method category = "Npc"
-end
-
-let mk_obj_attr t: Attribute.t = (new npc_attr t :> Attribute.t)
 
 let get_npcs obj obj_map =
   let open Object in

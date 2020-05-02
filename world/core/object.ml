@@ -6,7 +6,8 @@ type t = <
   set_command: Attribute.t option -> unit;
   take_features: Feature.t array -> unit;
   to_json: Yojson.Basic.t;
-  step: t -> t Space.t -> (Feature.t * t) list Lwt.t
+  step: t -> t Space.t -> (Feature.t * (t array) * t) list Lwt.t;
+  handle_event: t -> t array -> Feature.t -> (Feature.t * (t array) * t) list Lwt.t
 >
 
 type 'a state_trans = 'a * t * t Space.t -> 'a
@@ -28,8 +29,9 @@ class virtual elt n = object
        Environ.proceed_feature f env
     ) features
 
+  method virtual handle_event: t -> t array -> Feature.t -> (Feature.t * t array * t) list Lwt.t
   method virtual to_json: Yojson.Basic.t
-  method virtual step: t -> t Space.t -> (Feature.t * t) list Lwt.t
+  method virtual step: t -> t Space.t -> (Feature.t * t array * t) list Lwt.t
 end
 
 type obj_map = {

@@ -2,6 +2,7 @@ open Core
 open Space
 open Lwt.Syntax
 
+module NpcAttr = Npc.Attr
 module Npc = Npc.Api
 
 type tile_state = {
@@ -32,14 +33,34 @@ class elt n ds = object (self)
 
   val mutable state = {features=[||]; last=Timer.of_int 1; name="初"}
 
+  val mutable holds: Object.t list = []
+
   method to_json = `Assoc [
     ("name",`String self#get_name)
     ; ("state", tile_state_to_json state)
     ; ("env", Environ.to_json self#get_env)
   ]
 
+  method handle_event _ src feature = begin
+    let src = src.(0) in
+    match feature with
+    | Hold (attr, _) when attr#test "Status" -> begin
+        let _ = match attr#name with
+        | "enter" -> holds <- src :: holds
+        | "leave" -> holds <- List.filter_map (fun c ->
+            if (c#get_name = src#get_name) then None else Some c
+          ) holds
+        | _ -> ()
+        in
+        Lwt.return []
+      end
+    | _ -> Lwt.return []
+  end
+
   method step universe space = begin
-    let* spawn_events = Lwt.return @@ Environ.apply_rules self#get_env in
+    let* spawn_events = Lwt.return @@ List.map (fun (f,o) ->
+        (f, [|(self:>Object.t)|], o)
+      ) (Environ.apply_rules self#get_env) in
     let* step_events = begin
       let t = Timer.play state.last in
       let* fs = if Timer.trigger t then begin
@@ -54,13 +75,23 @@ class elt n ds = object (self)
       let fs, events = List.fold_left (fun (fs, events) (f, opt_target) ->
         match opt_target with
         | None -> (f::fs), events
-        | Some obj -> fs, ((f, obj) :: events);
+        | Some obj -> fs, ((f, [|(self:>Object.t)|], obj) :: events);
       ) ([], []) fs in
       self#take_features @@ Array.of_list fs;
       Lwt.return events
     end in
+    let adjacent_events = List.fold_left (fun acc t ->
+      let others = List.filter_map (fun c ->
+            if (c#get_name = t#get_name) then None else Some c
+      ) holds in
+      match others with
+      | [] -> acc
+      | _ -> acc @ [(Feature.mk_hold (NpcAttr.mk_tile_attr ()) 1, Array.of_list others, t)]
+    ) [] holds in
     let* _ = Logger.log "[ %s <%s> local_env: %s ]\n" (self#get_name) state.name (Environ.dump self#get_env) in
-    Lwt.return (spawn_events @ step_events)
+    let* _ = Logger.log "[ %s <%s> holds:%s ]\n" (self#get_name) state.name
+         (List.fold_left (fun acc c -> acc ^ " " ^ c#get_name) "" holds) in
+    Lwt.return (spawn_events @ step_events @ adjacent_events)
   end
 end
 
@@ -71,7 +102,11 @@ type map = {
 }
 
 let mk_tile name typ quality =
-  new elt name (fun s -> mk_state @@ Default.make_default_state quality typ (Timer.of_int 4) s)
+  let tile = new elt name (fun s ->
+    mk_state @@ Default.make_default_state quality typ (Timer.of_int 4) s
+  ) in
+  Default.set_default_bound quality typ 10 tile;
+  tile
 
 let mk_map width height: map =
   let map = {
@@ -101,7 +136,7 @@ let step map universe space =
    | None -> Lwt.return acc
    | Some m ->
        let* fs = m#step universe space in
-       let* es = (Lwt_list.map_s (fun (f,o) -> Lwt.return (Event.mk_event m o f)) fs) in
+       let* es = (Lwt_list.map_s (fun (f, s, t) -> Lwt.return (Event.mk_event f s t)) fs) in
        Lwt.return (acc @ es)
    ) [] (Array.to_list map.tiles)
 

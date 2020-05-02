@@ -9,6 +9,7 @@ type 'a rule = elt array * 'a
 
 type 'a t = {
   mutable features: elt FeatureMap.t;
+  mutable bounds: elt FeatureMap.t;
   mutable rules: ('a rule) list;
 }
 
@@ -21,7 +22,7 @@ let update_entry key cb_exist cb_none features =
   | Some v -> FeatureMap.add key v features
   | None -> features
 
-let empty rules = { features = FeatureMap.empty; rules = rules }
+let empty rules = { features = FeatureMap.empty; bounds = FeatureMap.empty; rules = rules }
 
 let fold f acc env = FeatureMap.fold f env.features acc
 
@@ -48,6 +49,9 @@ let to_json env =
   ) [] env.rules in
   `Assoc [("Features", `Assoc fs); ("Rules", `List rules)]
 
+let set_bound (attr, amount) env =
+  env.bounds <- update_entry attr#id (fun _ -> Some (attr, amount))
+    (fun _ -> Some (attr, amount)) env.bounds
 
 let proceed_feature feature env =
   match feature with
@@ -56,9 +60,14 @@ let proceed_feature feature env =
       if a >= amount then Some (attr, a - amount) else Some (attr, 0)
     ) (fun _ -> None) env.features
   | Feature.Produce (attr, amount) ->
+    let bound = FeatureMap.find_opt attr#id env.bounds in
+    let set v = match bound with
+    | None -> v
+    | Some (_, b) -> if v < b then v else b
+    in
     env.features <- update_entry attr#id (fun (attr,a) ->
-      Some (attr, a + amount)
-    ) (fun _ -> Some (attr, amount)) env.features
+      Some (attr, set (a + amount))
+    ) (fun _ -> Some (attr, set (amount))) env.features
   | Feature.Hold (attr, amount) ->
     env.features <- update_entry attr#id (fun _ ->
       Some (attr, amount)

@@ -37,33 +37,44 @@ class elt n = object(self)
     ]
 
   method step oref space = begin
+    let* left_evts = Lwt_list.fold_left_s (fun acc e ->
+      let target = Event.get_target e in
+      let* evts = target#handle_event (self :> Object.t) (Event.get_source e) (Event.get_feature e) in
+      (* FIXME: might trigger extra events *)
+      Lwt.return @@ acc @ (List.map (fun (f,s,t) -> Event.mk_event f s t) evts)
+    ) [] events in
+
     let* tile_events = TilesApi.step tiles oref space in
     let seq = List.of_seq @@ Hashtbl.to_seq npcs in
-    let* events = Lwt_list.fold_left_s (fun acc (_, v) ->
+    let* evts = Lwt_list.fold_left_s (fun acc (_, v) ->
       let* es = v#step oref space in
-      let* new_events = Lwt_list.map_s (fun (f, t) -> Lwt.return (Event.mk_event v t f)) es in
+      let* new_events = Lwt_list.map_s (fun (f, s, t) -> Lwt.return (Event.mk_event f s t)) es in
       Lwt.return @@ new_events @ acc
     ) [] seq in
     let my_events, deliver_events =
       List.partition (fun e -> (Event.get_target e)#get_name = self#get_name)
-      (tile_events @ events) in
+      (tile_events @ evts) in
     let* _ = Lwt_list.iter_s (fun e -> Logger.log "[ my event: %s ]\n" (Event.to_string e)) my_events in
     let* _ = Lwt_list.iter_s (fun e -> Logger.log "[ deliver event: %s ]\n" (Event.to_string e)) deliver_events in
     List.iter (fun e ->
       let feature = Event.get_feature e in
       match feature with
       | Feature.Produce (attr, _) -> begin
-          if attr#category = "Spawn" then
-            let obj = Apprentice.mk_apprentice (Event.get_source e) in
+          if attr#category = "Spawn" && Hashtbl.length npcs < 3 then
+            let obj = Apprentice.mk_apprentice (Event.get_source e).(0) in
             Hashtbl.add npcs (ID.of_string obj#get_name) (obj:>Object.t)
           else ()
         end
+      | Feature.Hold (attr, _) when attr#test "Status" && attr#name = "dead" ->
+        let npc = (Event.get_source e).(0) in
+        Hashtbl.remove npcs (ID.of_string npc#get_name)
       | _ -> ()
     ) my_events;
-    let* _ = Lwt_io.printf "omg get %d\n" (List.length my_events) in
+    events <- left_evts @ deliver_events;
     Lwt.return []
-    (* deliver_events *)
   end
+
+  method handle_event _ _ _ = Lwt.return []
 
   method init (_:unit) =
     tiles <- TilesApi.init_map tiles (TileRule.tile_rule self)

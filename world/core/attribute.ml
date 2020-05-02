@@ -1,16 +1,19 @@
 open UID
+
+type category = string
+
 module type ATTR = sig
   type t
   val to_string: t -> string
   val category: unit -> string
 end
 
-type t = <name: string; category: string; test: t->bool; id: UID.t>
+type t = <name: string; category: string; test: category->bool; id: UID.t>
 
 class virtual attr = object (self)
   method virtual name: string
   method virtual category: string
-  method test (f: t) = f#category = self#category
+  method test s = (s = self#category)
   method id = UID.of_string (self#category ^ "." ^ self#name)
 end
 

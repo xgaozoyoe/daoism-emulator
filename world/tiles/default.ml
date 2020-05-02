@@ -36,3 +36,14 @@ let make_default_state _ ttyp timeslice = fun (_, _, _) ->
   | Forest ->
     let f = Feature.mk_produce (new ext_attr Mu) 1 in
     (name, [| (f, None) |], timeslice)
+
+let set_default_bound _ _ bound tile =
+  let open AttributeWuXing in
+  let open Core in
+  let bounds = [| (new ext_attr Jing), bound
+    ; (new ext_attr Shui), bound
+    ; (new ext_attr Tu), bound
+    ; (new ext_attr Huo), bound
+    ; (new ext_attr Mu), bound
+    |] in
+  Array.iter (fun b -> Environ.set_bound b tile#get_env) bounds

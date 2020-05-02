@@ -3,21 +3,10 @@ module AttributeBase = Core.Attribute.From(Attribute.Base)
 module AttributeSpawn = Core.Attribute.From(Attribute.Spawn)
 
 open Core
-
-class tile_attr (obj:Object.t) = object
-  inherit Attribute.attr
-  method name = obj#get_name
-  method category = "Move"
-end
-
-let mk_tile_attr t: Attribute.t = (new tile_attr t :> Attribute.t)
-
-let apprentice_rule oref : (Feature.t * Object.t) Environ.rule =
-    let apprentice = new AttributeSpawn.ext_attr Apprentice in
-    [| new AttributeWuXing.ext_attr Jing, 3 |]
-    , (Feature.mk_produce apprentice 1, oref)
-
+open Attr
 open Quality
+open Common
+
 let quality_to_total = function
 | Unique -> 200
 | Rare -> 150
@@ -41,36 +30,25 @@ let make_basic_features total =
   Array.map2 (fun amount wx -> Feature.mk_produce wx amount) ratio wx
 
 let practise_state quality state =
-   let open Api in
-   { state with
-     description = "修炼";
-     features = Array.map (fun x-> x, None) (make_basic_features (quality_to_total quality));
-     last = Timer.of_int 10;
-   }
+  { state with
+    description = "修炼";
+    features = Array.map (fun x-> x, None) (make_basic_features (quality_to_total quality));
+    last = Timer.of_int 10;
+  }
 
 let explore_state state universe =
-   let open Api in
-   { state with
-     description = "探索";
-     features = [|Feature.mk_hold (mk_tile_attr state.tile) 1, Some universe|];
-     last = Timer.of_int 5;
-   }
-
-let move_state state tile =
-   let open Api in
-   {
-     description = "移动";
-     features = [|Feature.mk_hold (mk_tile_attr tile) 1, Some tile|];
-     last = Timer.of_int 5;
-     tile = state.tile
-   }
+  { state with
+    description = "探索";
+    features = [|Feature.mk_hold (mk_status_attr "stay") 1, Some universe|];
+    last = Timer.of_int 5;
+  }
 
 let make_state quality = fun (state,s,space) ->
   let pick = Random.int 3 in
   let open Space in
   match pick with
     | 2 -> move_state state
-        (Option.get @@ space.pick_from_coordinate Space.mk_rand_cor)
+        (Option.get @@ space.pick_from_coordinate (Space.mk_rand_cor ()))
     | 1 -> practise_state quality state
     | 0 -> explore_state state s
     | _ -> assert false

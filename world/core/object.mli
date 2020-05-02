@@ -6,7 +6,8 @@ type t = <
   set_command: Attribute.t option -> unit;
   take_features: Feature.t array -> unit;
   to_json: Yojson.Basic.t;
-  step: t -> t Space.t -> (Feature.t * t) list Lwt.t
+  step: t -> t Space.t -> (Feature.t * t array * t) list Lwt.t;
+  handle_event: t -> t array -> Feature.t -> (Feature.t * t array * t) list Lwt.t
 >
 
 class virtual elt: string -> object
@@ -20,7 +21,8 @@ class virtual elt: string -> object
   method get_command: Attribute.t option
   method set_command: Attribute.t option -> unit
   method virtual to_json: Yojson.Basic.t
-  method virtual step: t -> t Space.t -> (Feature.t * t) list Lwt.t
+  method virtual step: t -> t Space.t -> (Feature.t * t array * t) list Lwt.t
+  method virtual handle_event: t -> t array -> Feature.t -> (Feature.t * t array * t) list Lwt.t
 end
 
 type 'a state_trans = 'a * t * t Space.t -> 'a
