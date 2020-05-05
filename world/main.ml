@@ -1,16 +1,33 @@
 open Core
 open Lwt.Infix
+open Lwt.Syntax
 open Websocket
 open Websocket_lwt_unix
 
 let world = Universe.init Universe.default_config;;
 
-let rec step _ : unit Lwt.t =
-  Lwt_unix.sleep 1.0 >>= fun _ ->
-  Lwt.return @@ world#step
-    (world:>Object.t) world#space >>= fun _ ->
+type resp_data = {
+  mutable resp: Yojson.Basic.t;
+  mutable events: Yojson.Basic.t list;
+};;
+
+let resp_data = {
+    resp = `String "Welcome";
+    events = [];
+} in
+
+let resp_lock = Lwt_mutex.create () in
+
+let rec step _ : unit Lwt.t = begin
+  let* _ = Lwt_unix.sleep 1.0 in
+  let* _ = Lwt.return @@ world#step
+    (world:>Object.t) world#space in
+  Lwt_mutex.with_lock resp_lock @@ (fun _ ->
+    resp_data.resp <- world#to_json;
+    Lwt.return ();
+  ) >>= fun _ ->
   step ()
-in
+end in
 
 let section = Lwt_log.Section.make "daoism" in
 
@@ -19,10 +36,12 @@ let handler id client =
   let id = !id in
   let send = Connected_client.send client in
   Lwt_log.ign_info_f ~section "New connection (id = %d)" id;
+  (*
   Lwt.async (fun () ->
       Lwt_unix.sleep 1.0 >>= fun () ->
-      send @@ Frame.create ~content:"Welcome message" ()
+      send @@ Frame.create ~content:"Welcome" ()
     );
+  *)
   let rec recv_forever () =
     let open Frame in
     let react fr =
@@ -44,9 +63,10 @@ let handler id client =
 
       | Opcode.Text
       | Opcode.Binary ->
-        Lwt.return (Yojson.Basic.to_string (world#to_json)) >>= fun ctx ->
-        send @@ Frame.create ~content:ctx ()
-
+        let* buf = Lwt_mutex.with_lock resp_lock @@ (fun _ ->
+          Lwt.return @@ Yojson.Basic.to_string resp_data.resp
+        ) in
+        send @@ Frame.create ~content:buf ()
       | _ ->
         send @@ Frame.close 1002 >>= fun () ->
         Lwt.fail Exit
