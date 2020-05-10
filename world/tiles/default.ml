@@ -1,20 +1,24 @@
 module AttributeWuXing = Core.Attribute.From(Attribute.WuXing)
 
 type tile_type =
-  | Mountain
-  | River
+  | Water
   | Grassland
   | Forest
-  | Cave
+  | Mountain
 
 let to_string = function
-  | Mountain -> "山"
-  | River -> "河"
+  | Water-> "水"
   | Grassland -> "草"
+  | Mountain -> "山"
   | Forest -> "林"
-  | Cave -> "洞"
 
-let tile_type_array = [|Mountain; River; Grassland; Cave|]
+let type_id = function
+  | Water-> "water"
+  | Grassland -> "grassland"
+  | Mountain -> "mountain"
+  | Forest -> "forest"
+
+let tile_type_array = [|Mountain; Water; Grassland; Forest |]
 
 let make_default_state _ ttyp timeslice = fun (_, _, _) ->
   let open Core in
@@ -24,14 +28,11 @@ let make_default_state _ ttyp timeslice = fun (_, _, _) ->
   | Mountain ->
     let f = Feature.mk_produce (new ext_attr Jing) 1 in
     (name, [| (f, None) |], timeslice)
-  | River ->
+  | Water ->
     let f = Feature.mk_produce (new ext_attr Shui) 1 in
     (name, [| (f, None) |], timeslice)
   | Grassland ->
     let f = Feature.mk_produce (new ext_attr Tu) 1 in
-    (name, [| (f, None) |], timeslice)
-  | Cave ->
-    let f = Feature.mk_produce (new ext_attr Huo) 1 in
     (name, [| (f, None) |], timeslice)
   | Forest ->
     let f = Feature.mk_produce (new ext_attr Mu) 1 in

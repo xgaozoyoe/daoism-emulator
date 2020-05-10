@@ -16,24 +16,24 @@ class elt n = object(self)
 
   inherit Object.elt n
 
-  val mutable tiles: TilesApi.map = TilesApi.mk_map 2 2
+  val mutable map: TilesApi.map = TilesApi.mk_map 16 8
   val mutable events: Event.t list = []
   val npcs:(ID.t, Object.t) Hashtbl.t = Hashtbl.create 10
 
   method space: Object.t Space.t = let open Space in
   {
-    pick_from_coordinate = (fun x -> TilesApi.get_tile x tiles);
+    pick_from_coordinate = (fun x -> TilesApi.get_tile x map);
     get_path = fun _ _ -> [||]
   }
 
   method to_json =
     let seq = List.of_seq @@ Hashtbl.to_seq npcs in
     let npcs = List.fold_left (fun acc (_, v) ->
-      acc @ [(v#get_name, v#to_json)]
+      acc @ [v#to_json]
     ) [] seq in
     `Assoc [
-        ("Tiles", TilesApi.to_json (tiles))
-      ; ("Npcs", `Assoc npcs)
+        ("tiles", TilesApi.to_json (map))
+      ; ("npcs", `List npcs)
     ]
 
   method step oref space = begin
@@ -44,7 +44,7 @@ class elt n = object(self)
       Lwt.return @@ acc @ (List.map (fun (f,s,t) -> Event.mk_event f s t) evts)
     ) [] events in
 
-    let* tile_events = TilesApi.step tiles oref space in
+    let* tile_events = TilesApi.step map oref space in
     let seq = List.of_seq @@ Hashtbl.to_seq npcs in
     let* evts = Lwt_list.fold_left_s (fun acc (_, v) ->
       let* es = v#step oref space in
@@ -77,7 +77,7 @@ class elt n = object(self)
   method handle_event _ _ _ = Lwt.return []
 
   method init (_:unit) =
-    tiles <- TilesApi.init_map tiles (TileRule.tile_rule self)
+    map <- TilesApi.init_map map (TileRule.tile_rule self)
 
 
 end

@@ -25,7 +25,7 @@ let mk_state (desc, f, t) = {
     last = t;
   }
 
-class elt n ds = object (self)
+class elt n tid ds = object (self)
 
   inherit Object.elt n
 
@@ -35,8 +35,11 @@ class elt n ds = object (self)
 
   val mutable holds: Object.t list = []
 
+  val mutable type_id = tid
+
   method to_json = `Assoc [
     ("name",`String self#get_name)
+    ; ("tid", `String type_id)
     ; ("state", tile_state_to_json state)
     ; ("env", Environ.to_json self#get_env)
   ]
@@ -88,9 +91,11 @@ class elt n ds = object (self)
       | [] -> acc
       | _ -> acc @ [(Feature.mk_hold (NpcAttr.mk_tile_attr ()) 1, Array.of_list others, t)]
     ) [] holds in
+    (*
     let* _ = Logger.log "[ %s <%s> local_env: %s ]\n" (self#get_name) state.name (Environ.dump self#get_env) in
     let* _ = Logger.log "[ %s <%s> holds:%s ]\n" (self#get_name) state.name
          (List.fold_left (fun acc c -> acc ^ " " ^ c#get_name) "" holds) in
+    *)
     Lwt.return (spawn_events @ step_events @ adjacent_events)
   end
 end
@@ -99,25 +104,28 @@ type map = {
   tiles: (Object.t option) array;
   width: int;
   height: int;
+  mutable path: Object.t array -> Object.t array -> Object.t array
 }
 
 let mk_tile name typ quality =
-  let tile = new elt name (fun s ->
+  let tile = new elt name (Default.type_id typ) (fun s ->
     mk_state @@ Default.make_default_state quality typ (Timer.of_int 4) s
   ) in
   Default.set_default_bound quality typ 10 tile;
   tile
 
-let mk_map width height: map =
-  let map = {
+let mk_map width height: map = {
     tiles = Array.make (width * height) None;
     width = width;
     height = height;
-  } in map
+    path = fun _ _ -> [||]
+  }
 
 let init_map map rule_config =
+  let module Generator = Generator.TileInfoBuilder (struct let width = map.width end) in
+  let tiles_info, _ = Generator.build_tile_hints 2 map.width map.height in
   for i = 0 to (map.width * map.height - 1) do
-    let tile_type = Default.tile_type_array.(Random.int 4) in
+    let tile_type = Generator.random_tile tiles_info.(i).hist in
     let quality = Quality.Normal in
     let tile = mk_tile (Printf.sprintf "tile_%d" i) tile_type quality in
     let rules = rule_config tile_type in
@@ -144,7 +152,7 @@ let to_json map =
   `Assoc [
     ("width", `Int map.width);
     ("height", `Int map.height);
-    ("Tiles",
+    ("tiles",
        `List (Array.fold_left (fun acc c->
           acc @ [(Option.get c)#to_json]
         ) [] map.tiles)
