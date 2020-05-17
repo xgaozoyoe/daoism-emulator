@@ -1,42 +1,62 @@
 module AttributeWuXing = Core.Attribute.From(Attribute.WuXing)
+open Common
 
-type tile_type =
+type tile_feature =
+  | River
+
+let feature_id = function
+  | River -> "river"
+
+type base_type =
+  | Plain
   | Water
   | Grassland
   | Forest
   | Mountain
+
+let base_id = function
+  | Plain-> "plain"
+  | Water-> "water"
+  | Grassland -> "grassland"
+  | Mountain -> "mountain"
+  | Forest -> "forest"
+
+type tile_type = {
+  base: base_type;
+  features: tile_feature list;
+}
+
+let init_tile base = {base=base; features=[]}
+
+let add_feature f tile = {tile with features = f :: tile.features}
+
+let to_json ttyp =
+  `Assoc [
+  ("base", `String (base_id ttyp.base))
+  ; ("features", `List (List.map (fun f->
+      `String (feature_id f)) ttyp.features))
+  ]
 
 let to_string = function
   | Water-> "水"
   | Grassland -> "草"
   | Mountain -> "山"
   | Forest -> "林"
-
-let type_id = function
-  | Water-> "water"
-  | Grassland -> "grassland"
-  | Mountain -> "mountain"
-  | Forest -> "forest"
+  | Plain-> "无"
 
 let tile_type_array = [|Mountain; Water; Grassland; Forest |]
 
-let make_default_state _ ttyp timeslice = fun (_, _, _) ->
+let make_default_state _ ttyp timeslice = fun state _ _ _ ->
   let open Core in
   let open AttributeWuXing in
-  let name = to_string ttyp in
-  match ttyp with
-  | Mountain ->
-    let f = Feature.mk_produce (new ext_attr Jing) 1 in
-    (name, [| (f, None) |], timeslice)
-  | Water ->
-    let f = Feature.mk_produce (new ext_attr Shui) 1 in
-    (name, [| (f, None) |], timeslice)
-  | Grassland ->
-    let f = Feature.mk_produce (new ext_attr Tu) 1 in
-    (name, [| (f, None) |], timeslice)
-  | Forest ->
-    let f = Feature.mk_produce (new ext_attr Mu) 1 in
-    (name, [| (f, None) |], timeslice)
+  let es = match ttyp.base with
+  | Mountain -> [|Feature.mk_produce (new ext_attr Jing) 1|]
+  | Water -> [|Feature.mk_produce (new ext_attr Shui) 1|]
+  | Grassland -> [|Feature.mk_produce (new ext_attr Tu) 1|]
+  | Forest -> [|Feature.mk_produce (new ext_attr Mu) 1|]
+  | _ -> [||]
+  in
+  { state with deliver = Array.map (fun es -> (es, None)) es }, timeslice
 
 let set_default_bound _ _ bound tile =
   let open AttributeWuXing in

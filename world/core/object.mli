@@ -25,7 +25,11 @@ class virtual elt: string -> object
   method virtual handle_event: t -> t array -> Feature.t -> (Feature.t * t array * t) list Lwt.t
 end
 
-type 'a state_trans = 'a * t * t Space.t -> 'a
+(*
+ * State transformation function
+ * old_state -> universe -> space -> self -> new_state
+ *)
+type 'a state_trans = 'a -> t -> t Space.t -> t -> 'a * Timer.slice
 
 type obj_map = {
   get_obj: UID.t -> t

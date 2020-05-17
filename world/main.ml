@@ -6,6 +6,8 @@ open Websocket_lwt_unix
 
 let world = Universe.init Universe.default_config;;
 
+exception ConnectionLost of string
+
 type resp_data = {
   mutable resp: Yojson.Basic.t;
   mutable events: Yojson.Basic.t list;
@@ -57,7 +59,7 @@ let handler id client =
            send @@ Frame.create ~opcode:Opcode.Close
              ~content:(String.sub fr.content 0 2) ()
          else send @@ Frame.close 1000) >>= fun () ->
-        Lwt.fail Exit
+        raise @@ ConnectionLost "Close"
 
       | Opcode.Pong -> Lwt.return_unit
 
@@ -69,7 +71,7 @@ let handler id client =
         send @@ Frame.create ~content:buf ()
       | _ ->
         send @@ Frame.close 1002 >>= fun () ->
-        Lwt.fail Exit
+        raise @@ ConnectionLost "Unknown opcode"
     in
     Connected_client.recv client >>= react >>= recv_forever
   in
@@ -77,16 +79,28 @@ let handler id client =
     recv_forever
     (fun exn ->
        Lwt_log.info_f ~section "Connection to client %d lost" id >>= fun () ->
-       Lwt.fail exn)
+       (* Lwt.fail *) raise exn)
 in
 
 let main uri =
   Resolver_lwt.resolve_uri ~uri Resolver_lwt_unix.system >>= fun endp ->
   let open Conduit_lwt_unix in
   endp_to_server ~ctx:default_ctx endp >>= fun server ->
-  establish_server ~ctx:default_ctx ~check_request:(fun _ -> true) ~mode:server (handler @@ ref (-1))
+  let rec wait_for_connect () = Lwt.catch
+    (fun _ -> establish_server ~ctx:default_ctx ~check_request:(fun _ -> true) ~mode:server (handler @@ ref (-1)))
+    (fun _ -> wait_for_connect ()) in
+  wait_for_connect ()
 
 in
+
+Lwt.async_exception_hook := (function
+  | Unix.Unix_error (error, func, arg) ->
+    Logs.warn (fun m ->
+      m  "Client connection error %s: %s(%S)"
+        (Unix.error_message error) func arg
+    )
+  | exn -> Logs.err (fun m -> m "Unhandled exception: %a" Fmt.exn exn)
+);
 
 let () =
   let uri = ref "http://0.0.0.0:9001" in

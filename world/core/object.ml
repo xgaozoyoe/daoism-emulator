@@ -10,7 +10,6 @@ type t = <
   handle_event: t -> t array -> Feature.t -> (Feature.t * (t array) * t) list Lwt.t
 >
 
-type 'a state_trans = 'a * t * t Space.t -> 'a
 class virtual elt n = object
 
   val name = n
@@ -33,6 +32,8 @@ class virtual elt n = object
   method virtual to_json: Yojson.Basic.t
   method virtual step: t -> t Space.t -> (Feature.t * t array * t) list Lwt.t
 end
+
+type 'a state_trans = 'a -> t -> t Space.t -> t -> 'a * Timer.slice
 
 type obj_map = {
   get_obj: UID.t -> t

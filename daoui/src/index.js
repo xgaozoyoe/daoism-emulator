@@ -1,12 +1,13 @@
 import React, { Component } from 'react';
 var WS = require('websocket').w3cwebsocket
 WS === window.WebSocket
-var map = require ("./map.bs.js");
+var universe = require ("./universe.bs.js");
 
 function component(map_info) {
   // Lodash, currently included via a script, is required for this line to work
   //element.innerHTML = "test";
-  var guest = map.build_tiles(50, 50, map_info);
+  var guest = universe.build_tiles(50, 50, map_info.tiles);
+  var guest = guest + universe.build_npcs(map_info.npcs);
   return guest;
 }
 
@@ -15,6 +16,7 @@ var timer_status = 0;
 ws.onopen = function() {
     console.log('ws open');
     connected = true;
+    ws.send("get_data");
 };
 var connected = false;
 ws.onmessage = function(event) {
@@ -26,7 +28,7 @@ ws.onmessage = function(event) {
             console.log(npc);
             ihtml += map.build_npc(key);
         };
-        var map = json.tiles;
+        var map = json;
         document.getElementById("test").innerHTML = component(map);
         //document.getElementById("npcs").innerHTML = ihtml;
     } else {
@@ -40,6 +42,6 @@ window.fetch_status_data = function() {
     ws.send("get_data");
   };
 }
-timer_status = setInterval("window.fetch_status_data()",100);
+//timer_status = setInterval("window.fetch_status_data()",100);
 
 

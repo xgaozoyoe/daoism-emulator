@@ -1,25 +1,49 @@
+module Tile = struct
 
-type tile = {
-  name:string;
-  tid:string;
-  hist:int;
-} [@@bs.deriving abstract]
+  type tile_type = {
+    base:string;
+    features: string array;
+  } [@@bs.deriving abstract]
 
-type tiles = {
-   width: int;
-   height: int;
-   tiles: tile array;
-}[@@bs.deriving abstract]
+  type info = {
+    name:string;
+    ttype:tile_type;
+    hist:int;
+  } [@@bs.deriving abstract]
 
-type tile_info = {
-  tid:string;
-  center: int * int;
+  type t = {
+    tid:string;
+    center: int * int;
+  }
+
+  type tiles = {
+     width: int;
+     height: int;
+     tiles: info array;
+  }[@@bs.deriving abstract]
+
+  let mk_tile tid center = {tid=tid; center= center}
+end
+
+module Npc = struct
+  type t = {
+    name:string;
+    tile:string;
+  }[@@bs.deriving abstract]
+end
+
+
+module IdMap = Map.Make(String)
+
+type t = {
+  mutable tiles: Tile.t IdMap.t;
+  mutable npcs: Npc.t IdMap.t;
 }
 
-module tile_info_map = Map.Make(String)
-
-let map_info = {
-  mutable tile_map = Map.
+let map_info:t = {
+  tiles = IdMap.empty;
+  npcs = IdMap.empty;
+}
 
 let build_hexagon (cx, cy) =
   ((cx-30, cy), (cx-15, cy-26), (cx+15, cy-26),
@@ -50,29 +74,37 @@ let build_svg r points =
 let build_text center txt =
   Printf.sprintf "<text x='%d' y='%d'>%s</text>" (fst center) (snd center) txt
 
-let build_npc x y key =
-  Printf.sprintf "<text x='%d' y='%d'>%s</text>" x y key
+let build_feature center =
+  Printf.sprintf "<text x='%d' y='%d'>%s</text>" (fst center) (snd center) "w"
 
-let build_tiles left top (tiles_info:tiles) =
+let build_npc x y key =
+  Printf.sprintf "<circle cx='%d' cy='%d' stroke='black' fill='white' r='5'></circle>" x y
+
+let build_tiles left top tiles_info =
+  let open Tile in
   Js.log tiles_info;
   let centers = build_centers left top (tiles_info |. widthGet) (tiles_info |. heightGet) in
   Js.log @@ Printf.sprintf "centers built";
   let svgs = Array.mapi (fun i c ->
      let info = (tiles_info |. tilesGet).(i) in
-     let type_no = info |. tidGet in
-     let txt = build_text c (info |. nameGet) in
+     let type_no = info |. ttypeGet |. baseGet in
+     let name = info |. nameGet in
+     map_info.tiles <- IdMap.add name (mk_tile type_no c) map_info.tiles;
+     (* let txt = build_text c (info |. nameGet) in *)
      let svg = build_svg type_no (build_hexagon c) in
-     txt ^ svg
+     let tile_feature = info |. ttypeGet |. featuresGet in
+     Array.fold_left (fun svg f -> (build_feature c) ^ svg) svg tile_feature
   ) centers in
   Array.fold_left (fun acc c -> acc ^ c) "" svgs
 
-(*
 let build_npcs npc_infos =
+  let open Npc in
   let svgs = Array.mapi (fun i c ->
     let info = npc_infos.(i) in
     let tile = info |. tileGet in
-    let tile_center = map_info.tiles.(tile) in
-    let svg = build_npc_svg tile_center (info |. nameGet)
+    let tile = IdMap.find tile map_info.tiles in
+    let x, y = tile.center in
+    let svg = build_npc x y (info |. nameGet) in
+    svg
   ) npc_infos in
   Array.fold_left (fun acc c -> acc ^ c) "" svgs
-*)

@@ -1,45 +1,26 @@
 open Core
 open Space
 open Lwt.Syntax
+open Common
 
 module NpcAttr = Npc.Attr
 module Npc = Npc.Api
 
-type tile_state = {
-  name: string;
-  features: (Feature.t * (Object.t option)) array;
-  last: Timer.time_slice;
-}
-
-let tile_state_to_json ns: Yojson.Basic.t=
-  `Assoc [
-    ("description", `String ns.name)
-    ; ("features", `List (List.map (fun pre -> Object.pre_event_to_json pre)
-        (Array.to_list ns.features)))
-    ; ("last", Timer.to_json ns.last)
-   ]
-
-let mk_state (desc, f, t) = {
-    name = desc;
-    features = f;
-    last = t;
-  }
-
-class elt n tid ds = object (self)
+class elt n ttype ds = object (self)
 
   inherit Object.elt n
 
   val mutable state_trans: tile_state Object.state_trans = ds
 
-  val mutable state = {features=[||]; last=Timer.of_int 1; name="初"}
+  val mutable state = {deliver=[||]; name="初"}
 
   val mutable holds: Object.t list = []
 
-  val mutable type_id = tid
+  val mutable tile_type = ttype
 
   method to_json = `Assoc [
     ("name",`String self#get_name)
-    ; ("tid", `String type_id)
+    ; ("ttype", Default.to_json tile_type)
     ; ("state", tile_state_to_json state)
     ; ("env", Environ.to_json self#get_env)
   ]
@@ -58,31 +39,8 @@ class elt n tid ds = object (self)
         Lwt.return []
       end
     | _ -> Lwt.return []
-  end
 
-  method step universe space = begin
-    let* spawn_events = Lwt.return @@ List.map (fun (f,o) ->
-        (f, [|(self:>Object.t)|], o)
-      ) (Environ.apply_rules self#get_env) in
-    let* step_events = begin
-      let t = Timer.play state.last in
-      let* fs = if Timer.trigger t then begin
-        let fs' = state.features in
-        let ns = state_trans (state,universe,space) in
-        state <- ns;
-        Lwt.return @@ Array.to_list fs'
-      end else begin
-        state <- {state with last = t};
-        Lwt.return @@ []
-      end in
-      let fs, events = List.fold_left (fun (fs, events) (f, opt_target) ->
-        match opt_target with
-        | None -> (f::fs), events
-        | Some obj -> fs, ((f, [|(self:>Object.t)|], obj) :: events);
-      ) ([], []) fs in
-      self#take_features @@ Array.of_list fs;
-      Lwt.return events
-    end in
+    (*
     let adjacent_events = List.fold_left (fun acc t ->
       let others = List.filter_map (fun c ->
             if (c#get_name = t#get_name) then None else Some c
@@ -91,12 +49,32 @@ class elt n tid ds = object (self)
       | [] -> acc
       | _ -> acc @ [(Feature.mk_hold (NpcAttr.mk_tile_attr ()) 1, Array.of_list others, t)]
     ) [] holds in
+    *)
+  end
+
+  (* step universe space -> event list *)
+  method step _ _ = begin
+
+    let* step_events = begin
+      let fs, events = Array.fold_left (fun (fs, events) (f, opt_target) ->
+        match opt_target with
+        | None -> (f::fs), events
+        | Some obj -> fs, ((f, [|(self:>Object.t)|], obj) :: events);
+      ) ([], []) state.deliver in
+      self#take_features @@ Array.of_list fs;
+      Lwt.return events
+    end in
+
+    let* spawn_events = Lwt.return @@ List.map (fun (f,o) ->
+        (f, [|(self:>Object.t)|], o)
+      ) (Environ.apply_rules self#get_env) in
+
     (*
     let* _ = Logger.log "[ %s <%s> local_env: %s ]\n" (self#get_name) state.name (Environ.dump self#get_env) in
     let* _ = Logger.log "[ %s <%s> holds:%s ]\n" (self#get_name) state.name
          (List.fold_left (fun acc c -> acc ^ " " ^ c#get_name) "" holds) in
     *)
-    Lwt.return (spawn_events @ step_events @ adjacent_events)
+    Lwt.return (spawn_events @ step_events)
   end
 end
 
@@ -108,8 +86,8 @@ type map = {
 }
 
 let mk_tile name typ quality =
-  let tile = new elt name (Default.type_id typ) (fun s ->
-    mk_state @@ Default.make_default_state quality typ (Timer.of_int 4) s
+  let tile = new elt name typ (
+    Default.make_default_state quality typ (Timer.of_int 4)
   ) in
   Default.set_default_bound quality typ 10 tile;
   tile
@@ -122,10 +100,10 @@ let mk_map width height: map = {
   }
 
 let init_map map rule_config =
-  let module Generator = Generator.TileInfoBuilder (struct let width = map.width end) in
+  let module Generator = Generator.TileInfoBuilder in
   let tiles_info, _ = Generator.build_tile_hints 2 map.width map.height in
   for i = 0 to (map.width * map.height - 1) do
-    let tile_type = Generator.random_tile tiles_info.(i).hist in
+    let tile_type = tiles_info.(i).ttype in
     let quality = Quality.Normal in
     let tile = mk_tile (Printf.sprintf "tile_%d" i) tile_type quality in
     let rules = rule_config tile_type in
