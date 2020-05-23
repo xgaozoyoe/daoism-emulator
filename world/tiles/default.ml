@@ -2,10 +2,10 @@ module AttributeWuXing = Core.Attribute.From(Attribute.WuXing)
 open Common
 
 type tile_feature =
-  | River
+  | River of int list
 
 let feature_id = function
-  | River -> "river"
+  | River ls -> List.fold_left (fun acc c -> Printf.sprintf "%s_%d" acc c) "river" ls
 
 type base_type =
   | Plain

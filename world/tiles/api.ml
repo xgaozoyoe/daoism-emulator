@@ -100,7 +100,10 @@ let mk_map width height: map = {
   }
 
 let init_map map rule_config =
-  let module Generator = Generator.TileInfoBuilder in
+  let module Generator = Generator.TileInfoBuilder (struct
+      let width=map.width
+      let height=map.height
+   end) in
   let tiles_info, _ = Generator.build_tile_hints 2 map.width map.height in
   for i = 0 to (map.width * map.height - 1) do
     let tile_type = tiles_info.(i).ttype in

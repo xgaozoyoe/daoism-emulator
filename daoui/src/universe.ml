@@ -34,6 +34,7 @@ end
 
 
 module IdMap = Map.Make(String)
+module SVGMap = Map.Make(String)
 
 type t = {
   mutable tiles: Tile.t IdMap.t;
@@ -48,6 +49,14 @@ let map_info:t = {
 let build_hexagon (cx, cy) =
   ((cx-30, cy), (cx-15, cy-26), (cx+15, cy-26),
     (cx+30, cy), (cx+15, cy+26), (cx-15, cy+26))
+
+let get_direction_point (cx, cy) =
+  [|
+      (cx, cy -. 26.); (cx -. 22.5, cy -. 13.)
+    ; (cx -. 22.5, cy +. 13.); (cx, cy +. 26.)
+    ; (cx +. 22.5, cy +. 13.); (cx +. 22.5, cy -. 13.)
+  |]
+
 
 let build_hexagon_map ls_centers =
   Array.map (fun x -> build_hexagon x) ls_centers
@@ -74,8 +83,43 @@ let build_svg r points =
 let build_text center txt =
   Printf.sprintf "<text x='%d' y='%d'>%s</text>" (fst center) (snd center) txt
 
-let build_feature center =
-  Printf.sprintf "<text x='%d' y='%d'>%s</text>" (fst center) (snd center) "w"
+let build_line (x1,y1) (x2,y2) =
+  Printf.sprintf "<line x1='%f' y1='%f' x2='%f' y2='%f' class='river' />"
+    x1 y1 x2 y2
+
+let build_arc_line (x1,y1) (x2,y2) (cx,cy) =
+  Printf.sprintf "<path d='M %f %f Q %f %f, %f %f' style='stroke:blue; stroke-width:2'/>"
+    x1 y1 cx cy x2 y2
+
+module WaterPath = struct
+
+  exception UnexpectedPath
+
+  let make_path_svg (cx, cy) info = begin
+    let direction_info = get_direction_point (cx, cy) in
+    match info with
+    | [p; q] -> begin
+        let from_p = direction_info.(p) in
+        let to_q = direction_info.(q) in
+        build_line from_p to_q (*cx, cy*)
+      end
+    | [p] -> begin
+        let to_p = direction_info.(p) in
+        build_line (cx, cy) to_p
+      end
+    | _ -> raise UnexpectedPath
+  end
+
+end
+
+let to_float (x,y) = (Js.Int.toFloat x, Js.Int.toFloat y)
+
+let build_feature center f =
+  let direction_info = String.split_on_char '_' f
+    |> List.tl
+    |> List.map (fun c -> int_of_string c) in
+(*  Printf.sprintf "<text x='%d' y='%d'>%s</text> %s" (fst center) (snd center) f *)
+    (WaterPath.make_path_svg (to_float center) direction_info)
 
 let build_npc x y key =
   Printf.sprintf "<circle cx='%d' cy='%d' stroke='black' fill='white' r='5'></circle>" x y
@@ -93,7 +137,7 @@ let build_tiles left top tiles_info =
      (* let txt = build_text c (info |. nameGet) in *)
      let svg = build_svg type_no (build_hexagon c) in
      let tile_feature = info |. ttypeGet |. featuresGet in
-     Array.fold_left (fun svg f -> (build_feature c) ^ svg) svg tile_feature
+     Array.fold_left (fun svg f -> svg ^ (build_feature c f)) svg tile_feature
   ) centers in
   Array.fold_left (fun acc c -> acc ^ c) "" svgs
 
