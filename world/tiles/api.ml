@@ -53,7 +53,7 @@ class elt n ttype ds = object (self)
   end
 
   (* step universe space -> event list *)
-  method step _ _ = begin
+  method step space = begin
 
     let* step_events = begin
       let fs, events = Array.fold_left (fun (fs, events) (f, opt_target) ->
@@ -65,6 +65,10 @@ class elt n ttype ds = object (self)
       Lwt.return events
     end in
 
+    let s, ts = state_trans state space (self:>Object.t) in
+    state <- s;
+    space.register_event ts (self:>Object.t);
+
     let* spawn_events = Lwt.return @@ List.map (fun (f,o) ->
         (f, [|(self:>Object.t)|], o)
       ) (Environ.apply_rules self#get_env) in
@@ -74,6 +78,10 @@ class elt n ttype ds = object (self)
     let* _ = Logger.log "[ %s <%s> holds:%s ]\n" (self#get_name) state.name
          (List.fold_left (fun acc c -> acc ^ " " ^ c#get_name) "" holds) in
     *)
+
+    (* Register step action after 5 timeslice *)
+    space.register_event (Timer.of_int 5) (self:>Object.t);
+
     Lwt.return (spawn_events @ step_events)
   end
 end
@@ -92,6 +100,10 @@ let mk_tile name typ quality =
   Default.set_default_bound quality typ 10 tile;
   tile
 
+let get_tile (cor:coordinate) map =
+  let (top, left) = cor in
+  map.tiles.(top * map.width + left)
+
 let mk_map width height: map = {
     tiles = Array.make (width * height) None;
     width = width;
@@ -99,7 +111,7 @@ let mk_map width height: map = {
     path = fun _ _ -> [||]
   }
 
-let init_map map rule_config =
+let init_map space map rule_config =
   let module Generator = Generator.TileInfoBuilder (struct
       let width=map.width
       let height=map.height
@@ -111,23 +123,10 @@ let init_map map rule_config =
     let tile = mk_tile (Printf.sprintf "tile_%d" i) tile_type quality in
     let rules = rule_config tile_type in
     Array.iter (fun rule -> Environ.install_rule rule tile#get_env) rules;
-    map.tiles.(i) <- Some tile
+    map.tiles.(i) <- Some tile;
+    space.register_event (Timer.of_int 5) tile;
   done;
   map
-
-let get_tile (cor:coordinate) map =
-  let (top, left) = cor in
-  map.tiles.(top * map.width + left)
-
-let step map universe space =
-   let* _ = Lwt_io.printf ("step\n") in
-   Lwt_list.fold_left_s (fun acc m -> match m with
-   | None -> Lwt.return acc
-   | Some m ->
-       let* fs = m#step universe space in
-       let* es = (Lwt_list.map_s (fun (f, s, t) -> Lwt.return (Event.mk_event f s t)) fs) in
-       Lwt.return (acc @ es)
-   ) [] (Array.to_list map.tiles)
 
 let to_json map =
   `Assoc [

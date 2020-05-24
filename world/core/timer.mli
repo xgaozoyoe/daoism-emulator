@@ -15,7 +15,9 @@ module TriggerQueue : sig
         mutable next: 'a t;
      }
 
+  val empty: 'a t
   val register_event: slice -> 'a -> 'a t -> 'a t
   val fetch_events: 'a list -> 'a t -> 'a list * 'a t
+  val dump: 'a t -> ('a -> string) -> unit Lwt.t
 
 end

@@ -26,9 +26,12 @@ module Tile = struct
 end
 
 module Npc = struct
+  type state = {
+    tile:string;
+  }[@@bs.deriving abstract]
   type t = {
     name:string;
-    tile:string;
+    state:state;
   }[@@bs.deriving abstract]
 end
 
@@ -143,9 +146,16 @@ let build_tiles left top tiles_info =
 
 let build_npcs npc_infos =
   let open Npc in
+  Js.log "bild_npcs";
+  Js.log "bild_npcs";
+  Js.log "bild_npcs";
+  Js.log "bild_npcs";
+  Js.log "bild_npcs";
   let svgs = Array.mapi (fun i c ->
     let info = npc_infos.(i) in
-    let tile = info |. tileGet in
+    Js.log info;
+    let tile = info |. stateGet |. tileGet in
+    Js.log tile;
     let tile = IdMap.find tile map_info.tiles in
     let x, y = tile.center in
     let svg = build_npc x y (info |. nameGet) in

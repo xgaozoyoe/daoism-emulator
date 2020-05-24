@@ -1,4 +1,3 @@
-open Core
 open Lwt.Infix
 open Lwt.Syntax
 open Websocket
@@ -22,8 +21,7 @@ let resp_lock = Lwt_mutex.create () in
 
 let rec step _ : unit Lwt.t = begin
   let* _ = Lwt_unix.sleep 1.0 in
-  let* _ = Lwt.return @@ world#step
-    (world:>Object.t) world#space in
+  let* _ = Lwt.return @@ world#step world#space in
   Lwt_mutex.with_lock resp_lock @@ (fun _ ->
     resp_data.resp <- world#to_json;
     Lwt.return ();

@@ -46,7 +46,7 @@ let to_string = function
 
 let tile_type_array = [|Mountain; Water; Grassland; Forest |]
 
-let make_default_state _ ttyp timeslice = fun state _ _ _ ->
+let make_default_state _ ttyp timeslice = fun state _ _ ->
   let open Core in
   let open AttributeWuXing in
   let es = match ttyp.base with

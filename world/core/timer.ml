@@ -1,3 +1,5 @@
+open Lwt.Infix
+
 type slice = int
 
 type timer_excp = StaleTimeSlice
@@ -23,6 +25,7 @@ module TriggerQueue = struct
         wait: slice;
         mutable next: 'a t;
      }
+  let empty = Tail
 
   let mk_event e l next = Entity {value = e; wait = l; next = next}
 
@@ -49,5 +52,11 @@ module TriggerQueue = struct
         fetch_events (e.value :: es) e.next
     | Entity e -> es, Entity {value = e.value; wait = e.wait -1; next = e.next}
     | Tail -> es, Tail
+
+  let rec dump head to_str = match head with
+    | Entity e ->
+        Lwt_io.printf "%s:%d -> " (to_str e.value) e.wait >>=
+        fun _ -> dump e.next to_str
+    | Tail -> Lwt_io.printf "nil\n"
 
 end

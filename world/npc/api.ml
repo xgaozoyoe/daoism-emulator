@@ -55,7 +55,7 @@ class elt n ds (tile:Object.t) = object (self)
   end
 
   (* step universe space *)
-  method step _ _ = begin
+  method step _ = begin
     let* _ = Logger.log "%s 完成了 %s\n" name state.description in
     let fs, events = Array.fold_left (fun (fs, events) (f, opt_target) ->
       match opt_target with

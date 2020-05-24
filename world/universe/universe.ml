@@ -19,11 +19,16 @@ class elt n = object(self)
   val mutable map: TilesApi.map = TilesApi.mk_map 16 8
   val mutable events: Event.t list = []
   val npcs:(ID.t, Object.t) Hashtbl.t = Hashtbl.create 10
+  val mutable event_queue = Timer.TriggerQueue.empty
 
   method space: Object.t Space.t = let open Space in
   {
     pick_from_coordinate = (fun x -> TilesApi.get_tile x map);
-    get_path = fun _ _ -> [||]
+    get_path = (fun _ _ -> [||]);
+    the_universe = (fun _ -> (self :> Object.t));
+    cancel_event = (fun _ -> ());
+    register_event = (fun t o ->
+      event_queue <- Timer.TriggerQueue.register_event t o event_queue);
   }
 
   method to_json =
@@ -36,7 +41,8 @@ class elt n = object(self)
       ; ("npcs", `List npcs)
     ]
 
-  method step oref space = begin
+  method step space = begin
+    (* let* _ = Timer.TriggerQueue.dump event_queue (fun x -> x#get_name) in *)
     let* left_evts = Lwt_list.fold_left_s (fun acc e ->
       let target = Event.get_target e in
       let* evts = target#handle_event (self :> Object.t) (Event.get_source e) (Event.get_feature e) in
@@ -44,25 +50,31 @@ class elt n = object(self)
       Lwt.return @@ acc @ (List.map (fun (f,s,t) -> Event.mk_event f s t) evts)
     ) [] events in
 
-    let* tile_events = TilesApi.step map oref space in
-    let seq = List.of_seq @@ Hashtbl.to_seq npcs in
-    let* evts = Lwt_list.fold_left_s (fun acc (_, v) ->
-      let* es = v#step oref space in
+    let seq, queue = Timer.TriggerQueue.fetch_events [] event_queue in
+    event_queue <- queue;
+
+    let* evts = Lwt_list.fold_left_s (fun acc v ->
+      let* es = v#step space in
       let* new_events = Lwt_list.map_s (fun (f, s, t) -> Lwt.return (Event.mk_event f s t)) es in
       Lwt.return @@ new_events @ acc
     ) [] seq in
+
     let my_events, deliver_events =
       List.partition (fun e -> (Event.get_target e)#get_name = self#get_name)
-      (tile_events @ evts) in
+      evts
+    in
     let* _ = Lwt_list.iter_s (fun e -> Logger.log "[ my event: %s ]\n" (Event.to_string e)) my_events in
     let* _ = Lwt_list.iter_s (fun e -> Logger.log "[ deliver event: %s ]\n" (Event.to_string e)) deliver_events in
+
+    (* Handle events that are generated for universe *)
     List.iter (fun e ->
       let feature = Event.get_feature e in
       match feature with
       | Feature.Produce (attr, _) -> begin
           if attr#category = "Spawn" && Hashtbl.length npcs < 3 then
             let obj = Apprentice.mk_apprentice (Event.get_source e).(0) in
-            Hashtbl.add npcs (ID.of_string obj#get_name) (obj:>Object.t)
+            Hashtbl.add npcs (ID.of_string obj#get_name) (obj:>Object.t);
+            space.register_event (Timer.of_int 1) (obj:>Object.t)
           else ()
         end
       | Feature.Hold (attr, _) when attr#test "Status" && attr#name = "dead" ->
@@ -70,6 +82,7 @@ class elt n = object(self)
         Hashtbl.remove npcs (ID.of_string npc#get_name)
       | _ -> ()
     ) my_events;
+
     events <- left_evts @ deliver_events;
     Lwt.return []
   end
@@ -77,7 +90,8 @@ class elt n = object(self)
   method handle_event _ _ _ = Lwt.return []
 
   method init (_:unit) =
-    map <- TilesApi.init_map map (TileRule.tile_rule self)
+    let space = self#space in
+    map <- TilesApi.init_map space map (TileRule.tile_rule self)
 
 
 end

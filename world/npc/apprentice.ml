@@ -7,15 +7,15 @@ open Common
 
 let _ = Random.self_init ()
 
-let make_state quality = fun state universe space _ ->
+let make_state quality = fun state space _ ->
   let pick = Random.int 3 in
   let open Space in
   match pick with
     | 2 -> move_state state
         (Option.get @@ space.pick_from_coordinate (Space.mk_rand_cor state.tile))
-        universe
+        (space.the_universe ())
     | 1 -> practise_state quality state
-    | 0 -> explore_state state universe
+    | 0 -> explore_state state (space.the_universe ())
     | _ -> assert false
 
 let mk_apprentice tile =
