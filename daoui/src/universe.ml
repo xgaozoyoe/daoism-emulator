@@ -27,6 +27,7 @@ end
 
 module Npc = struct
   type state = {
+    description:string;
     tile:string;
   }[@@bs.deriving abstract]
   type t = {
@@ -124,8 +125,9 @@ let build_feature center f =
 (*  Printf.sprintf "<text x='%d' y='%d'>%s</text> %s" (fst center) (snd center) f *)
     (WaterPath.make_path_svg (to_float center) direction_info)
 
-let build_npc x y key =
-  Printf.sprintf "<circle cx='%d' cy='%d' stroke='black' fill='white' r='5'></circle>" x y
+let build_npc x y key desc=
+  Printf.sprintf "<circle cx='%d' cy='%d' stroke='black' fill='white' r='5'></circle><text x='%d' y='%d'>%s(%s)</text>"
+    x y (x-10) (y-10) key desc
 
 let build_tiles left top tiles_info =
   let open Tile in
@@ -146,19 +148,14 @@ let build_tiles left top tiles_info =
 
 let build_npcs npc_infos =
   let open Npc in
-  Js.log "bild_npcs";
-  Js.log "bild_npcs";
-  Js.log "bild_npcs";
-  Js.log "bild_npcs";
-  Js.log "bild_npcs";
   let svgs = Array.mapi (fun i c ->
     let info = npc_infos.(i) in
-    Js.log info;
-    let tile = info |. stateGet |. tileGet in
-    Js.log tile;
-    let tile = IdMap.find tile map_info.tiles in
+    let state = info |. stateGet in
+    let tile_name = state |. tileGet in
+    let description = state |. descriptionGet in
+    let tile = IdMap.find tile_name map_info.tiles in
     let x, y = tile.center in
-    let svg = build_npc x y (info |. nameGet) in
+    let svg = build_npc x y (info |. nameGet) description in
     svg
   ) npc_infos in
   Array.fold_left (fun acc c -> acc ^ c) "" svgs

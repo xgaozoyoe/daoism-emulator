@@ -114,6 +114,7 @@ let () =
   Arg.parse speclist anon_fun usage_msg;
 
   ignore @@ main @@ Uri.of_string !uri;
+
   Lwt_main.run @@ step ()
 
 in

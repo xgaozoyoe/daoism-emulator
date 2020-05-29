@@ -65,10 +65,6 @@ class elt n ttype ds = object (self)
       Lwt.return events
     end in
 
-    let s, ts = state_trans state space (self:>Object.t) in
-    state <- s;
-    space.register_event ts (self:>Object.t);
-
     let* spawn_events = Lwt.return @@ List.map (fun (f,o) ->
         (f, [|(self:>Object.t)|], o)
       ) (Environ.apply_rules self#get_env) in
@@ -80,8 +76,9 @@ class elt n ttype ds = object (self)
     *)
 
     (* Register step action after 5 timeslice *)
-    space.register_event (Timer.of_int 5) (self:>Object.t);
-
+    let* s, ts = Lwt.return @@ state_trans state space (self:>Object.t) in
+    state <- s;
+    space.register_event ts (self:>Object.t);
     Lwt.return (spawn_events @ step_events)
   end
 end
@@ -112,11 +109,19 @@ let mk_map width height: map = {
   }
 
 let init_map space map rule_config =
+  Printexc.record_backtrace true;
   let module Generator = Generator.TileInfoBuilder (struct
       let width=map.width
       let height=map.height
    end) in
-  let tiles_info, _ = Generator.build_tile_hints 2 map.width map.height in
+
+  (* Initialize tile graph *)
+  Generator.init_graph 2;
+
+  (* Initialize rivers *)
+  Generator.build_rivers 2;
+
+  let tiles_info = Generator.nodes in
   for i = 0 to (map.width * map.height - 1) do
     let tile_type = tiles_info.(i).ttype in
     let quality = Quality.Normal in

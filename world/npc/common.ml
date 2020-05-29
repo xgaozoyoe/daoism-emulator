@@ -48,12 +48,14 @@ let practise_state quality state =
   let es = Array.map (fun x-> x, None) (make_basic_features (quality_to_total quality)) in
   { state with deliver = es; description = "修炼" }, Timer.of_int 9
 
-let move_state state tile _ =
-  let es = if state.tile#get_name = tile#get_name then [||]
-  else [|
-    Feature.mk_hold (mk_status_attr "leave") 1, Some state.tile
-    ; Feature.mk_hold (mk_status_attr "enter") 1, Some tile
-  |] in
+let move_state state src target space =
+  let es = begin
+    if src = target then [||]
+    else [|
+      Feature.mk_hold (mk_status_attr "leave") 1, Some src
+      ; Feature.mk_hold (mk_status_attr "enter") 1, Some target
+    |]
+  end in
   { state with deliver = es; description = "移动"}, Timer.of_int 4
 
 let explore_state state universe =

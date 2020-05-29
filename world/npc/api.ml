@@ -20,12 +20,6 @@ class elt n ds (tile:Object.t) = object (self)
     health = 10;
   }
 
-(*
-   features=[|Feature.mk_hold (mk_status_attr "enter") 1, Some tile|];
-   last=Timer.of_int 1;
-*)
-
-
   method to_json = `Assoc [
     ("name",`String self#get_name)
     ; ("state", npc_state_to_json state)
@@ -55,14 +49,26 @@ class elt n ds (tile:Object.t) = object (self)
   end
 
   (* step universe space *)
-  method step _ = begin
+  method step space = begin
     let* _ = Logger.log "%s 完成了 %s\n" name state.description in
-    let fs, events = Array.fold_left (fun (fs, events) (f, opt_target) ->
+    let* fs, events = Lwt.return @@ Array.fold_left (fun (fs, events) (f, opt_target) ->
       match opt_target with
       | None -> (f::fs), events
       | Some obj -> fs, ((f, [|(self:>Object.t)|], obj) :: events);
     ) ([], []) state.deliver in
-    self#take_features @@ Array.of_list fs;
+    let* _ = Logger.log " ---- takeing features ---- " in
+    let* _ = Lwt.return @@ self#take_features @@ Array.of_list fs in
+
+    (* This is a bit clag *)
+    let* _ = Logger.log " ---- state trans ---- " in
+    let* s, ts = Lwt.return @@ state_trans state space (self:>Object.t) in
+    state <- s;
+    let* _ = Logger.log "register event\n" in
+    let* _ = Logger.log "register event\n" in
+    let* _ = Logger.log "register event\n" in
+    let* _ = Logger.log "register event\n" in
+    let* _ = Logger.log "register event\n" in
+    let* _ = Lwt.return @@ space.register_event ts (self:>Object.t) in
     let* _ = Logger.log "[ local_env: %s ]\n" (Environ.dump self#get_env) in
     (* space.register_event (#self, events) *)
     Lwt.return events

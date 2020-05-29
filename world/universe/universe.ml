@@ -16,19 +16,20 @@ class elt n = object(self)
 
   inherit Object.elt n
 
-  val mutable map: TilesApi.map = TilesApi.mk_map 16 8
+  val mutable map: TilesApi.map = TilesApi.mk_map 4 4
   val mutable events: Event.t list = []
   val npcs:(ID.t, Object.t) Hashtbl.t = Hashtbl.create 10
   val mutable event_queue = Timer.TriggerQueue.empty
 
   method space: Object.t Space.t = let open Space in
   {
-    pick_from_coordinate = (fun x -> TilesApi.get_tile x map);
     get_path = (fun _ _ -> [||]);
     the_universe = (fun _ -> (self :> Object.t));
     cancel_event = (fun _ -> ());
     register_event = (fun t o ->
       event_queue <- Timer.TriggerQueue.register_event t o event_queue);
+    get_view cor = TilesApi.get_view cor map;
+    get_tile cor = TilesApi.get_tile cor map;
   }
 
   method to_json =
@@ -42,7 +43,8 @@ class elt n = object(self)
     ]
 
   method step space = begin
-    (* let* _ = Timer.TriggerQueue.dump event_queue (fun x -> x#get_name) in *)
+    let* _ = Lwt_io.printf ("step...\n") in
+    let* _ = Timer.TriggerQueue.dump event_queue (fun x -> x#get_name) in
     let* left_evts = Lwt_list.fold_left_s (fun acc e ->
       let target = Event.get_target e in
       let* evts = target#handle_event (self :> Object.t) (Event.get_source e) (Event.get_feature e) in

@@ -7,16 +7,17 @@ open Common
 
 let _ = Random.self_init ()
 
-let make_state quality = fun state space _ ->
-  let pick = Random.int 3 in
+let make_state quality = fun state space self ->
   let open Space in
+  let around = space.get_view state.coordinate in
+  let source = space.tile self#loc
   match pick with
-    | 2 -> move_state state
-        (Option.get @@ space.pick_from_coordinate (Space.mk_rand_cor state.tile))
+    | 2 -> move_state state source
+        (space.get_tile around.(Random.int (List.length around + 1)))
         (space.the_universe ())
     | 1 -> practise_state quality state
     | 0 -> explore_state state (space.the_universe ())
-    | _ -> assert false
+    | _ -> practise_state quality state
 
 let mk_apprentice tile =
     let name = Core.Name.gen_name "Apprentice" in
