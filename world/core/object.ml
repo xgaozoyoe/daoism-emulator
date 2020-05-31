@@ -1,25 +1,30 @@
 open UID
 type t = <
   get_name: string;
+  get_loc: Space.coordinate;
+  set_loc: Space.coordinate -> unit;
   get_env: (Feature.t * t)  Environ.t;
   get_command: Attribute.t option;
   set_command: Attribute.t option -> unit;
   take_features: Feature.t array -> unit;
   to_json: Yojson.Basic.t;
   step: t Space.t -> (Feature.t * (t array) * t) list Lwt.t;
-  handle_event: t -> t array -> Feature.t -> (Feature.t * (t array) * t) list Lwt.t
+  handle_event: t Space.t -> t array -> Feature.t -> (Feature.t * (t array) * t) list Lwt.t
 >
 
-class virtual elt n = object
+class virtual elt n (loc:Space.coordinate) = object
 
   val name = n
   val uid = UID.of_string n
+  val mutable loc = loc
   val mutable env: (Feature.t * t) Environ.t = Environ.empty []
   val mutable modifier: Modifier.t list = []
   val mutable command: Attribute.t option = None
 
   method get_name = name
   method get_env = env
+  method get_loc = loc
+  method set_loc l = loc <- l
   method get_command = command
   method set_command c = command <- c
 
@@ -28,7 +33,7 @@ class virtual elt n = object
        Environ.proceed_feature f env
     ) features
 
-  method virtual handle_event: t -> t array -> Feature.t -> (Feature.t * t array * t) list Lwt.t
+  method virtual handle_event: t Space.t -> t array -> Feature.t -> (Feature.t * t array * t) list Lwt.t
   method virtual to_json: Yojson.Basic.t
   method virtual step: t Space.t -> (Feature.t * t array * t) list Lwt.t
 end

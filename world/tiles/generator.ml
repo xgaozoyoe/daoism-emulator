@@ -12,8 +12,9 @@ end
 module TileInfo = struct
 
   type t = {
-    x: int;
-    y: int;
+    cor: (int * int);
+    cx: int;
+    cy: int;
     index: int;
     hist: int;
     ttype: Default.tile_type;
@@ -22,7 +23,7 @@ module TileInfo = struct
   let equal a b = (a.index = b.index)
   let hash a = a.index
   let hist a = a.hist
-  let empty_info = {x=0;y=0;index=0;hist=0;ttype=Default.init_tile Default.Plain}
+  let empty_info = {cor=(0,0);cx=0;cy=0;index=0;hist=0;ttype=Default.init_tile Default.Plain}
 
   let compare a b = a.index - b.index
 
@@ -89,6 +90,9 @@ end
 
 module TileGraph (R:Rectangle) (C:Comparable) = struct
 
+  module HexCoordinate = HexCoordinate (R)
+  open HexCoordinate
+
   include Imperative.Graph.Concrete (C)
 
   let init_graph nodes graph vgen egen = begin
@@ -99,7 +103,7 @@ module TileGraph (R:Rectangle) (C:Comparable) = struct
         set_node x y node nodes;
         add_vertex graph node
       done
-    done
+    done;
 
     for y=0 to R.height - 1 do
       for x=0 to R.width - 1 do
@@ -107,19 +111,19 @@ module TileGraph (R:Rectangle) (C:Comparable) = struct
         let c_node = get_node x y nodes in
         if y - 1 >= 0 then begin
           let node = get_node x (y - 1) nodes in
-          add_edge tilegraph c_node node
+          add_edge graph c_node node
         end;
         let y_offset = if x mod 2 = 1 then 1 else 0 in
         if x - 1 >= 0 then begin
           if (y - 1 + y_offset >= 0 && y - 1 + y_offset < R.height )
           then begin
             let node = get_node (x - 1) (y - 1 + y_offset) nodes in
-            add_edge tilegraph c_node node
+            add_edge graph c_node node
           end;
           if (y + y_offset < R.height) then begin
             let node = get_node (x - 1) (y + y_offset) nodes in
             if egen c_node node then
-              add_edge tilegraph c_node node
+              add_edge graph c_node node
             else ()
           end;
         end;
@@ -163,10 +167,10 @@ module TileInfoBuilder (R: Rectangle)= struct
 
     (* Generate rivers *)
     let n1,_ = Array.fold_left (fun (n, hist) (c:TileInfo.t) -> if c.hist > hist then
-        c, c.hist else n, hist) (TileInfoGraph.get_node 0 0 nodes, 0) nodes in
+        c, c.hist else n, hist) (Coordinate.get_node 0 0 nodes, 0) nodes in
 
     let n2,_ = Array.fold_left (fun (n, hist) (c:TileInfo.t) -> if c.hist < hist then
-        c, c.hist else n, hist) (TileInfoGraph.get_node 0 0 nodes, 1000) nodes in
+        c, c.hist else n, hist) (Coordinate.get_node 0 0 nodes, 1000) nodes in
 
     let edges , _ = HistPath.shortest_path tile_graph n2 n1 in
 
@@ -208,9 +212,10 @@ module TileInfoBuilder (R: Rectangle)= struct
       let cy = if x mod 2 = 0 then cy else cy + 26 in
       let h = build_hist ls_sand (cx, cy) in
       TileInfo.({
-        x=cx;
-        y=cy;
-        index= TileInfoGraph.get_index x y;
+        cor=(x,y);
+        cx=cx;
+        cy=cy;
+        index= Coordinate.get_index x y;
         hist=h;
         ttype=init_tile h;
       })

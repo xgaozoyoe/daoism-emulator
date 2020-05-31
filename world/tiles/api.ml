@@ -6,9 +6,11 @@ open Common
 module NpcAttr = Npc.Attr
 module Npc = Npc.Api
 
-class elt n ttype ds = object (self)
+(*exception SiblingException*)
 
-  inherit Object.elt n
+class elt n ttype cor ds = object (self)
+
+  inherit Object.elt n cor
 
   val mutable state_trans: tile_state Object.state_trans = ds
 
@@ -27,10 +29,11 @@ class elt n ttype ds = object (self)
 
   method handle_event _ src feature = begin
     let src = src.(0) in
+    let* _ = Logger.log "[ %s handles event %s from %s]\n" (self#get_name) (Feature.to_string feature) (src#get_name) in
     match feature with
     | Hold (attr, _) when attr#test "Status" -> begin
         let _ = match attr#name with
-        | "enter" -> holds <- src :: holds
+        | "enter" -> src#set_loc self#get_loc; holds <- src :: holds
         | "leave" -> holds <- List.filter_map (fun c ->
             if (c#get_name = src#get_name) then None else Some c
           ) holds
@@ -90,12 +93,21 @@ type map = {
   mutable path: Object.t array -> Object.t array -> Object.t array
 }
 
-let mk_tile name typ quality =
-  let tile = new elt name typ (
+let mk_tile name typ quality cor =
+  let tile = new elt name typ cor (
     Default.make_default_state quality typ (Timer.of_int 4)
   ) in
   Default.set_default_bound quality typ 10 tile;
   tile
+
+let get_view (cor:coordinate) map =
+  let module Coordinate = Generator.HexCoordinate (struct
+      let width=map.width
+      let height=map.height
+  end) in
+  Coordinate.sibling_fold cor (fun acc _ sibling _ ->
+    Option.get sibling :: acc
+  ) [] map.tiles
 
 let get_tile (cor:coordinate) map =
   let (top, left) = cor in
@@ -123,9 +135,11 @@ let init_map space map rule_config =
 
   let tiles_info = Generator.nodes in
   for i = 0 to (map.width * map.height - 1) do
-    let tile_type = tiles_info.(i).ttype in
+    let info = tiles_info.(i) in
+    let tile_type = info.ttype in
     let quality = Quality.Normal in
-    let tile = mk_tile (Printf.sprintf "tile_%d" i) tile_type quality in
+    let tile_name = Printf.sprintf "tile_%d" i in
+    let tile = mk_tile tile_name tile_type quality info.cor in
     let rules = rule_config tile_type in
     Array.iter (fun rule -> Environ.install_rule rule tile#get_env) rules;
     map.tiles.(i) <- Some tile;

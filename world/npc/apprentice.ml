@@ -9,12 +9,20 @@ let _ = Random.self_init ()
 
 let make_state quality = fun state space self ->
   let open Space in
-  let around = space.get_view state.coordinate in
-  let source = space.tile self#loc
+  let around = space.get_view self#get_loc in
+  let source = Option.get @@ space.get_tile self#get_loc in
+  let  _,_ = around, source in
+  let pick = Random.int 3 in
   match pick with
-    | 2 -> move_state state source
-        (space.get_tile around.(Random.int (List.length around + 1)))
-        (space.the_universe ())
+    | 2 -> begin
+        let len = List.length around in
+        let target = if len > 0 then
+          List.nth around (Random.int len)
+        else
+          source
+        in
+        move_state state source target
+      end
     | 1 -> practise_state quality state
     | 0 -> explore_state state (space.the_universe ())
     | _ -> practise_state quality state

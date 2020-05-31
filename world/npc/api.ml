@@ -9,12 +9,11 @@ open Common
 
 class elt n ds (tile:Object.t) = object (self)
 
-  inherit Object.elt n
+  inherit Object.elt n (tile#get_loc)
 
   val mutable state_trans : (npc_state) Object.state_trans = ds
 
   val mutable state = {
-    tile=tile;
     description="诞生";
     deliver=[||];
     health = 10;
@@ -27,7 +26,7 @@ class elt n ds (tile:Object.t) = object (self)
   ]
 
 
-  method handle_event universe src feature = begin
+  method handle_event space src feature = begin
     match feature with
     | Produce (attr, dmg) when attr#test "Damage" ->
       let src = src.(0) in
@@ -35,7 +34,8 @@ class elt n ds (tile:Object.t) = object (self)
         self#get_name src#get_name dmg in
       state <- {state with health = state.health - dmg};
       if state.health <= 0 then begin
-        let s, _ = Common.dead_state state universe in
+        let loc_tile = Option.get @@ space.get_tile (self#get_loc) in
+        let s, _ = Common.dead_state state loc_tile (space.the_universe ()) in
         state <- s;
         (* space register self t *)
         Lwt.return []
@@ -63,11 +63,7 @@ class elt n ds (tile:Object.t) = object (self)
     let* _ = Logger.log " ---- state trans ---- " in
     let* s, ts = Lwt.return @@ state_trans state space (self:>Object.t) in
     state <- s;
-    let* _ = Logger.log "register event\n" in
-    let* _ = Logger.log "register event\n" in
-    let* _ = Logger.log "register event\n" in
-    let* _ = Logger.log "register event\n" in
-    let* _ = Logger.log "register event\n" in
+    let* _ = Logger.log "register event %s\n" (Timer.to_string ts) in
     let* _ = Lwt.return @@ space.register_event ts (self:>Object.t) in
     let* _ = Logger.log "[ local_env: %s ]\n" (Environ.dump self#get_env) in
     (* space.register_event (#self, events) *)

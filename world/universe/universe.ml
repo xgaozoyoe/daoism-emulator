@@ -14,7 +14,7 @@ let default_config _ = {tile_rule = ()}
 
 class elt n = object(self)
 
-  inherit Object.elt n
+  inherit Object.elt n (-1,-1)
 
   val mutable map: TilesApi.map = TilesApi.mk_map 4 4
   val mutable events: Event.t list = []
@@ -28,8 +28,8 @@ class elt n = object(self)
     cancel_event = (fun _ -> ());
     register_event = (fun t o ->
       event_queue <- Timer.TriggerQueue.register_event t o event_queue);
-    get_view cor = TilesApi.get_view cor map;
-    get_tile cor = TilesApi.get_tile cor map;
+    get_view = (fun cor -> TilesApi.get_view cor map);
+    get_tile = (fun cor -> TilesApi.get_tile cor map);
   }
 
   method to_json =
@@ -47,7 +47,7 @@ class elt n = object(self)
     let* _ = Timer.TriggerQueue.dump event_queue (fun x -> x#get_name) in
     let* left_evts = Lwt_list.fold_left_s (fun acc e ->
       let target = Event.get_target e in
-      let* evts = target#handle_event (self :> Object.t) (Event.get_source e) (Event.get_feature e) in
+      let* evts = target#handle_event (self#space) (Event.get_source e) (Event.get_feature e) in
       (* FIXME: might trigger extra events *)
       Lwt.return @@ acc @ (List.map (fun (f,s,t) -> Event.mk_event f s t) evts)
     ) [] events in
@@ -69,21 +69,23 @@ class elt n = object(self)
     let* _ = Lwt_list.iter_s (fun e -> Logger.log "[ deliver event: %s ]\n" (Event.to_string e)) deliver_events in
 
     (* Handle events that are generated for universe *)
-    List.iter (fun e ->
+    let* _ = Lwt_list.iter_s (fun e ->
       let feature = Event.get_feature e in
       match feature with
       | Feature.Produce (attr, _) -> begin
           if attr#category = "Spawn" && Hashtbl.length npcs < 3 then
             let obj = Apprentice.mk_apprentice (Event.get_source e).(0) in
             Hashtbl.add npcs (ID.of_string obj#get_name) (obj:>Object.t);
-            space.register_event (Timer.of_int 1) (obj:>Object.t)
-          else ()
+            let x,y = obj#get_loc in
+            let* _ = Lwt_io.printf "spawn at location (%d,%d)\n" x y in
+            Lwt.return @@ space.register_event (Timer.of_int 1) (obj:>Object.t)
+          else Lwt.return ()
         end
       | Feature.Hold (attr, _) when attr#test "Status" && attr#name = "dead" ->
         let npc = (Event.get_source e).(0) in
-        Hashtbl.remove npcs (ID.of_string npc#get_name)
-      | _ -> ()
-    ) my_events;
+        Lwt.return @@ Hashtbl.remove npcs (ID.of_string npc#get_name)
+      | _ -> Lwt.return ()
+    ) my_events in
 
     events <- left_evts @ deliver_events;
     Lwt.return []

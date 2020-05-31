@@ -8,7 +8,6 @@ open Quality
 
 type npc_state = {
   description: string;
-  tile: Object.t; (* position of the npc *)
   deliver: (Feature.t * Object.t option) array;
   health: int;
 }
@@ -16,7 +15,6 @@ type npc_state = {
 let npc_state_to_json ns =
   `Assoc [
     ("description", `String ns.description)
-    ; ("tile", `String ns.tile#get_name)
     ; ("health", `Int ns.health)
     ; ("features", `List (List.map (fun pre -> Object.pre_event_to_json pre)
         (Array.to_list ns.deliver)))
@@ -48,7 +46,7 @@ let practise_state quality state =
   let es = Array.map (fun x-> x, None) (make_basic_features (quality_to_total quality)) in
   { state with deliver = es; description = "修炼" }, Timer.of_int 9
 
-let move_state state src target space =
+let move_state state src target =
   let es = begin
     if src = target then [||]
     else [|
@@ -62,9 +60,9 @@ let explore_state state universe =
   let es = [|Feature.mk_hold (mk_status_attr "stay") 1, Some universe|] in
   { state with deliver = es; description = "探索"}, Timer.of_int 5
 
-let dead_state state universe =
+let dead_state state tile universe =
   let es = [|
-    Feature.mk_hold (mk_status_attr "leave") 1, Some state.tile
+    Feature.mk_hold (mk_status_attr "leave") 1, Some tile
     ; Feature.mk_hold (mk_status_attr "dead") 1, Some universe
   |] in
   {state with deliver = es; description="死亡"}, Timer.of_int 1
