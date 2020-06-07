@@ -111,8 +111,8 @@ let get_view (cor:coordinate) map =
   ) [] map.tiles
 
 let get_tile (cor:coordinate) map =
-  let (top, left) = cor in
-  map.tiles.(top * map.width + left)
+  let (x, y) = cor in
+  map.tiles.(y* map.width + x)
 
 let mk_map width height: map = {
     tiles = Array.make (width * height) None;

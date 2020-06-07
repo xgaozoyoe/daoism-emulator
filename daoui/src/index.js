@@ -35,7 +35,12 @@ ws.onmessage = function(event) {
           var npcs = json.data.updates;
           for (const idx in json.data.updates) {
             console.log(npcs[idx].name);
-            document.getElementById(npcs[idx].name).outerHTML = universe.update_npc(npcs[idx]);
+            var element = document.getElementById(npcs[idx].name);
+            if (element) {
+              element.outerHTML = universe.update_npc(npcs[idx]);
+            } else {
+              document.getElementById("test").innerHTML += universe.update_npc(npcs[idx])
+            }
           }
         } else {
           console.log(json);

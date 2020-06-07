@@ -52,7 +52,8 @@ class elt n ds (tile:Object.t) = object (self)
   (* step universe space *)
   method step space = begin
     space.set_active (self:>Object.t);
-    let* _ = Logger.log "%s 完成了 %s\n" name state.description in
+    let loc = self#get_loc in
+    let* _ = Logger.log "%s 完成了 %s (%d,%d) \n" name state.description (fst loc) (snd loc) in
     let* fs, events = Lwt.return @@ Array.fold_left (fun (fs, events) (f, opt_target) ->
       match opt_target with
       | None -> (f::fs), events
