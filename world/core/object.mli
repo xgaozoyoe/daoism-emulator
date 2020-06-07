@@ -1,6 +1,7 @@
 open UID
 type t = <
   get_name: string;
+  get_uid: UID.t;
   get_env: (Feature.t * t) Environ.t;
   get_loc: Space.coordinate;
   set_loc: Space.coordinate -> unit;
@@ -19,6 +20,7 @@ class virtual elt: string -> Space.coordinate -> object
   val mutable env: (Feature.t * t) Environ.t
   val mutable modifier: Modifier.t list
   method get_name: string
+  method get_uid: UID.t
   method get_loc: Space.coordinate
   method set_loc: Space.coordinate -> unit
   method take_features: Feature.t array -> unit
@@ -43,3 +45,5 @@ type obj_map = {
 type pre_event = Feature.t * (t option)
 
 val pre_event_to_json: pre_event -> Yojson.Basic.t
+
+val compare: t -> t -> int

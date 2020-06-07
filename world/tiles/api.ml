@@ -24,6 +24,7 @@ class elt n ttype cor ds = object (self)
     ("name",`String self#get_name)
     ; ("ttype", Default.to_json tile_type)
     ; ("state", tile_state_to_json state)
+    ; ("loc", Space.to_json self#get_loc)
     ; ("env", Environ.to_json self#get_env)
   ]
 

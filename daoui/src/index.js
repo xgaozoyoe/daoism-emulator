@@ -19,18 +19,27 @@ ws.onopen = function() {
     ws.send("get_data");
 };
 var connected = false;
+var tiles = null;
 ws.onmessage = function(event) {
     if (connected) {
         console.log(event.data);
         var json = JSON.parse(event.data);
-        var ihtml = "";
-        for(const npc in json.Npcs) {
-            console.log(npc);
-            ihtml += map.build_npc(key);
-        };
-        var map = json;
-        document.getElementById("test").innerHTML = component(map);
-        //document.getElementById("npcs").innerHTML = ihtml;
+        if (json.method == "global") {
+          var ihtml = "";
+          var global = json.data;
+          var map = global;
+          universe.initialize_coordinate(50,50,map.tiles);
+          document.getElementById("test").innerHTML = universe.build_tiles(50,50,map.tiles)
+            + universe.build_npcs(map.npcs);
+        } else if (json.method == "update") {
+          var npcs = json.data.updates;
+          for (const idx in json.data.updates) {
+            console.log(npcs[idx].name);
+            document.getElementById(npcs[idx].name).outerHTML = universe.update_npc(npcs[idx]);
+          }
+        } else {
+          console.log(json);
+        }
     } else {
         console.log("not connected!");
         console.log(event.json);

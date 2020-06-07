@@ -1,12 +1,14 @@
 type t =
   | Apprentice
+  | Creature
   | Mob
   | God
 
 let to_string p = match p with
-    | Apprentice -> "学徒"
-    | Mob -> "妖怪"
-    | God -> "神仙"
+    | Apprentice -> "Apprentice"
+    | Creature -> "Creature"
+    | Mob -> "Mob"
+    | God -> "God"
 
 let category _ = "Spawn"
 

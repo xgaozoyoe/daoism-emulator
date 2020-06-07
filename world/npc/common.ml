@@ -60,6 +60,9 @@ let explore_state state universe =
   let es = [|Feature.mk_hold (mk_status_attr "stay") 1, Some universe|] in
   { state with deliver = es; description = "探索"}, Timer.of_int 5
 
+let idle_state state =
+  { state with deliver = [||]; description = "休息"}, Timer.of_int 5
+
 let dead_state state tile universe =
   let es = [|
     Feature.mk_hold (mk_status_attr "leave") 1, Some tile

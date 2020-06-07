@@ -22,6 +22,7 @@ class elt n ds (tile:Object.t) = object (self)
   method to_json = `Assoc [
     ("name",`String self#get_name)
     ; ("state", npc_state_to_json state)
+    ; ("loc", Space.to_json self#get_loc)
     ; ("env", Environ.to_json self#get_env)
   ]
 
@@ -50,6 +51,7 @@ class elt n ds (tile:Object.t) = object (self)
 
   (* step universe space *)
   method step space = begin
+    space.set_active (self:>Object.t);
     let* _ = Logger.log "%s 完成了 %s\n" name state.description in
     let* fs, events = Lwt.return @@ Array.fold_left (fun (fs, events) (f, opt_target) ->
       match opt_target with

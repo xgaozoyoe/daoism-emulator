@@ -1,6 +1,7 @@
 open UID
 type t = <
   get_name: string;
+  get_uid: UID.t;
   get_loc: Space.coordinate;
   set_loc: Space.coordinate -> unit;
   get_env: (Feature.t * t)  Environ.t;
@@ -22,6 +23,7 @@ class virtual elt n (loc:Space.coordinate) = object
   val mutable command: Attribute.t option = None
 
   method get_name = name
+  method get_uid = uid
   method get_env = env
   method get_loc = loc
   method set_loc l = loc <- l
@@ -54,3 +56,5 @@ let pre_event_to_json pe =
     | Some obj -> cs :: [("target", `String obj#get_name)]
   in
   `Assoc cs
+
+let compare a b = UID.compare a#get_uid b#get_uid

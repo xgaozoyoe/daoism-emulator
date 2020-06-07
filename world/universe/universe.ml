@@ -1,10 +1,13 @@
 open Lwt.Syntax
 module Apprentice = Npc.Apprentice
+module Creature = Npc.Creature
 module Npc = Npc.Api
 module TilesApi = Tiles.Api
 
 open Core
+
 module ID = UID.Make(UID.Id)
+module ObjectSet = Set.Make (Object)
 
 type config = {
   tile_rule: unit
@@ -16,10 +19,17 @@ class elt n = object(self)
 
   inherit Object.elt n (-1,-1)
 
-  val mutable map: TilesApi.map = TilesApi.mk_map 4 4
+  val mutable map: TilesApi.map = TilesApi.mk_map 16 8
   val mutable events: Event.t list = []
   val npcs:(ID.t, Object.t) Hashtbl.t = Hashtbl.create 10
   val mutable event_queue = Timer.TriggerQueue.empty
+  val mutable update = ObjectSet.empty
+
+  method get_update: Yojson.Basic.t =
+    let objs = ObjectSet.fold (fun v acc ->
+      acc @ [v#to_json]
+    ) update [] in
+    `Assoc [ ("updates", `List objs) ]
 
   method space: Object.t Space.t = let open Space in
   {
@@ -30,6 +40,7 @@ class elt n = object(self)
       event_queue <- Timer.TriggerQueue.register_event t o event_queue);
     get_view = (fun cor -> TilesApi.get_view cor map);
     get_tile = (fun cor -> TilesApi.get_tile cor map);
+    set_active = (fun o -> update <- ObjectSet.add o update);
   }
 
   method to_json =
@@ -43,6 +54,7 @@ class elt n = object(self)
     ]
 
   method step space = begin
+    update <- ObjectSet.empty;
     let* _ = Lwt_io.printf ("step...\n") in
     let* _ = Timer.TriggerQueue.dump event_queue (fun x -> x#get_name) in
     let* left_evts = Lwt_list.fold_left_s (fun acc e ->
@@ -54,6 +66,7 @@ class elt n = object(self)
 
     let seq, queue = Timer.TriggerQueue.fetch_events [] event_queue in
     event_queue <- queue;
+    let* _ = Lwt_io.printf ("trigger %d objs\n") (List.length seq) in
 
     let* evts = Lwt_list.fold_left_s (fun acc v ->
       let* es = v#step space in
@@ -73,13 +86,26 @@ class elt n = object(self)
       let feature = Event.get_feature e in
       match feature with
       | Feature.Produce (attr, _) -> begin
-          if attr#category = "Spawn" && Hashtbl.length npcs < 3 then
-            let obj = Apprentice.mk_apprentice (Event.get_source e).(0) in
-            Hashtbl.add npcs (ID.of_string obj#get_name) (obj:>Object.t);
-            let x,y = obj#get_loc in
-            let* _ = Lwt_io.printf "spawn at location (%d,%d)\n" x y in
-            Lwt.return @@ space.register_event (Timer.of_int 1) (obj:>Object.t)
-          else Lwt.return ()
+          match attr#category with
+          | "Spawn" -> begin
+              match attr#name with
+              | "Apprentice" -> begin
+                  let obj = Apprentice.mk_apprentice (Event.get_source e).(0) in
+                  Hashtbl.add npcs (ID.of_string obj#get_name) (obj:>Object.t);
+                  let x,y = obj#get_loc in
+                  let* _ = Lwt_io.printf "spawn at location (%d,%d)\n" x y in
+                  Lwt.return @@ space.register_event (Timer.of_int 1) (obj:>Object.t)
+                end
+              | "Creature" -> begin
+                  let obj = Creature.mk_creature (Event.get_source e).(0) in
+                  Hashtbl.add npcs (ID.of_string obj#get_name) (obj:>Object.t);
+                  let x,y = obj#get_loc in
+                  let* _ = Lwt_io.printf "spawn at location (%d,%d)\n" x y in
+                  Lwt.return @@ space.register_event (Timer.of_int 1) (obj:>Object.t)
+                end
+              | _ -> Lwt.return ()
+            end
+          | _ -> Lwt.return ()
         end
       | Feature.Hold (attr, _) when attr#test "Status" && attr#name = "dead" ->
         let npc = (Event.get_source e).(0) in
