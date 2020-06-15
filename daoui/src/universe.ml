@@ -150,11 +150,13 @@ end
 let to_float (x,y) = (Js.Int.toFloat x, Js.Int.toFloat y)
 
 let build_feature center f =
-  let direction_info = String.split_on_char '_' f
-    |> List.tl
-    |> List.map (fun c -> int_of_string c) in
-(*  Printf.sprintf "<text x='%d' y='%d'>%s</text> %s" (fst center) (snd center) f *)
-    (WaterPath.make_path_svg (to_float center) direction_info)
+  let (x, y) = center in
+  let feature_info = String.split_on_char '_' f in
+  let feature_name = List.hd feature_info in
+  let feature_info = List.map (fun c ->int_of_string c) (List.tl feature_info) in
+  match feature_name with
+  | "river" -> (WaterPath.make_path_svg (to_float center) feature_info)
+  | _ -> Printf.sprintf "<g><use href='/dist/res/%s.svg#main' x='%d' y='%d' width='40' height='40'/></g>" feature_name x y
 
 let build_npc info =
   let open Npc in
@@ -164,8 +166,9 @@ let build_npc info =
   let (x,y) = (tile_cor |. xGet), (tile_cor |. yGet) in
   let name = info |. nameGet in
   let (cx,cy) = (get_the !coordinate_system).cor_to_pos (x, y) in
-  let icon = Printf.sprintf "<circle cx='%d' cy='%d' stroke='black' fill='white' r='5'></circle>"
-    cx cy in
+  let svg_name = List.hd @@ String.split_on_char '.' name in
+  let icon = Printf.sprintf "<use href='/dist/res/%s.svg#main' x='%d' y='%d' width='30' height='30'/>"
+    svg_name cx cy in
   let hint = build_text (cx, cy) desc in
   Printf.sprintf "<g id='%s'>%s</g>" name (icon^hint)
 
@@ -177,8 +180,9 @@ let update_npc info =
   let tile_cor = info |. locGet in
   let (x,y) = (tile_cor |. xGet), (tile_cor |. yGet) in
   let (cx,cy) = (get_the !coordinate_system).cor_to_pos (x, y) in
-  let icon = Printf.sprintf "<circle cx='%d' cy='%d' stroke='black' fill='white' r='5'></circle>"
-    cx cy in
+  let svg_name = List.hd @@ String.split_on_char '.' name in
+  let icon = Printf.sprintf "<use href='/dist/res/%s.svg#main' x='%d' y='%d' width='30' height='30'/>"
+    svg_name cx cy in
   let hint = build_text (cx, cy) desc in
   Printf.sprintf "<g id='%s'>%s</g>" name (icon^hint)
 

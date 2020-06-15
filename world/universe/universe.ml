@@ -19,7 +19,7 @@ class elt n = object(self)
 
   inherit Object.elt n (-1,-1)
 
-  val mutable map: TilesApi.map = TilesApi.mk_map 16 8
+  val mutable map: TilesApi.map = TilesApi.mk_map 32 16
   val mutable events: Event.t list = []
   val npcs:(ID.t, Object.t) Hashtbl.t = Hashtbl.create 10
   val mutable event_queue = Timer.TriggerQueue.empty
@@ -56,7 +56,7 @@ class elt n = object(self)
   method step space = begin
     update <- ObjectSet.empty;
     let* _ = Lwt_io.printf ("step...\n") in
-    let* _ = Timer.TriggerQueue.dump event_queue (fun x -> x#get_name) in
+    (* let* _ = Timer.TriggerQueue.dump event_queue (fun x -> x#get_name) in *)
     let* left_evts = Lwt_list.fold_left_s (fun acc e ->
       let target = Event.get_target e in
       let* evts = target#handle_event (self#space) (Event.get_source e) (Event.get_feature e) in
@@ -87,7 +87,8 @@ class elt n = object(self)
       match feature with
       | Feature.Produce (attr, _) -> begin
           match attr#category with
-          | "Spawn" -> begin
+          | "Spawn" when Population.try_spawn () -> begin
+              Population.increase_population ();
               match attr#name with
               | "Apprentice" -> begin
                   let obj = Apprentice.mk_apprentice (Event.get_source e).(0) in

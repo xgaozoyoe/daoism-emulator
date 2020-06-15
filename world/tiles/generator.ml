@@ -159,7 +159,27 @@ module TileInfoBuilder (R: Rectangle)= struct
     else if hist < 30 then init_tile Default.Forest
     else init_tile Default.Mountain
 
+  let init_feature ttype = match ttype with
+    | Default.Water -> Some (Default.Reef [1])
+    | Default.Forest -> Some (Default.Cave [1])
+    | Default.Mountain -> Some (Default.Peak [1])
+    | Default.Grassland-> Some (Default.Mud [1])
+    | Default.Plain -> None
 
+  let build_features _ = begin
+    let open TileInfo in
+    let features = Array.init (R.width * R.height) (fun _ -> true) in
+    Coordinate.fold_with_kernel (fun _ node sibling _ ->
+      features.(node.index) <- features.(node.index) && node.hist >= sibling.hist
+    ) () nodes;
+    ignore @@ Array.map (fun node ->
+      if (features.(node.index) == true) then
+        ignore @@ Option.map (fun f ->
+          let feature = Default.add_feature f node.ttype in
+          Coordinate.set_node_via_idx node.index {node with ttype = feature} nodes
+        ) (init_feature node.ttype.base)
+    ) nodes
+  end
 
   let build_rivers _ = begin
 

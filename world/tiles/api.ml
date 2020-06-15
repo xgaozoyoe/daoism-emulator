@@ -129,10 +129,11 @@ let init_map space map rule_config =
    end) in
 
   (* Initialize tile graph *)
-  Generator.init_graph 2;
+  Generator.init_graph 4;
 
   (* Initialize rivers *)
   Generator.build_rivers 2;
+  Generator.build_features 2;
 
   let tiles_info = Generator.nodes in
   for i = 0 to (map.width * map.height - 1) do

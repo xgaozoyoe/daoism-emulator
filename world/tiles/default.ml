@@ -1,11 +1,28 @@
 module AttributeWuXing = Core.Attribute.From(Attribute.WuXing)
 open Common
+open AttributeWuXing
+open Core
 
 type tile_feature =
   | River of int list
+  | Peak of int list
+  | Cave of int list
+  | Reef of int list
+  | Mud of int list
+
+let produce_of_feature = function
+  | Peak _ -> [Feature.mk_produce (new ext_attr Jing) 1]
+  | River _ -> []
+  | Cave _ -> [Feature.mk_produce (new ext_attr Huo) 1]
+  | Reef _ -> [Feature.mk_produce (new ext_attr Shui) 1]
+  | Mud _ -> [Feature.mk_produce (new ext_attr Tu) 1]
 
 let feature_id = function
   | River ls -> List.fold_left (fun acc c -> Printf.sprintf "%s_%d" acc c) "river" ls
+  | Peak ls -> List.fold_left (fun acc c -> Printf.sprintf "%s_%d" acc c) "peak" ls
+  | Cave ls -> List.fold_left (fun acc c -> Printf.sprintf "%s_%d" acc c) "cave" ls
+  | Reef ls -> List.fold_left (fun acc c -> Printf.sprintf "%s_%d" acc c) "reef" ls
+  | Mud ls -> List.fold_left (fun acc c -> Printf.sprintf "%s_%d" acc c) "mud" ls
 
 type base_type =
   | Plain
@@ -47,20 +64,10 @@ let to_string = function
 let tile_type_array = [|Mountain; Water; Grassland; Forest |]
 
 let make_default_state _ ttyp timeslice = fun state _ _ ->
-  let open Core in
-  let open AttributeWuXing in
-  let es = match ttyp.base with
-  | Mountain -> [|Feature.mk_produce (new ext_attr Jing) 1|]
-  | Water -> [|Feature.mk_produce (new ext_attr Shui) 1|]
-  | Grassland -> [|Feature.mk_produce (new ext_attr Tu) 1|]
-  | Forest -> [|Feature.mk_produce (new ext_attr Mu) 1|]
-  | _ -> [||]
-  in
-  { state with deliver = Array.map (fun es -> (es, None)) es }, timeslice
+  let es = List.fold_left (fun acc f -> (produce_of_feature f) @ acc) [] ttyp.features in
+  { state with deliver = Array.map (fun es -> (es, None)) (Array.of_list es) }, timeslice
 
 let set_default_bound _ _ bound tile =
-  let open AttributeWuXing in
-  let open Core in
   let bounds = [| (new ext_attr Jing), bound
     ; (new ext_attr Shui), bound
     ; (new ext_attr Tu), bound

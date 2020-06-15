@@ -31,5 +31,5 @@ let mk_creature tile =
 
 let creature_rule oref : (Feature.t * Object.t) Environ.rule =
     let creature = new AttributeSpawn.ext_attr Creature in
-    [| new AttributeWuXing.ext_attr Jing, 3 |]
+    [| new AttributeWuXing.ext_attr Shui, 5 |]
     , (Feature.mk_produce creature 1, oref)

@@ -28,8 +28,8 @@ ws.onmessage = function(event) {
           var ihtml = "";
           var global = json.data;
           var map = global;
-          universe.initialize_coordinate(50,50,map.tiles);
-          document.getElementById("test").innerHTML = universe.build_tiles(50,50,map.tiles)
+          universe.initialize_coordinate(-50,-50,map.tiles);
+          document.getElementById("test").innerHTML = universe.build_tiles(-50,-50,map.tiles)
             + universe.build_npcs(map.npcs);
         } else if (json.method == "update") {
           var npcs = json.data.updates;
