@@ -1,4 +1,5 @@
 open Graph
+open Ui
 
 let _ = Random.self_init ()
 
@@ -13,8 +14,7 @@ module TileInfo = struct
 
   type t = {
     cor: (int * int);
-    cx: int;
-    cy: int;
+    pos: (int * int);
     index: int;
     hist: int;
     ttype: Default.tile_type;
@@ -23,7 +23,13 @@ module TileInfo = struct
   let equal a b = (a.index = b.index)
   let hash a = a.index
   let hist a = a.hist
-  let empty_info = {cor=(0,0);cx=0;cy=0;index=0;hist=0;ttype=Default.init_tile Default.Plain}
+  let empty_info = {
+    cor=(0,0);
+    pos=(0,0);
+    index=0;
+    hist=0;
+    ttype=Default.init_tile Default.Plain
+  }
 
   let compare a b = a.index - b.index
 
@@ -34,7 +40,7 @@ module HistWeight = struct
     type t = int
     type edge = (TileInfo.t * TileInfo.t)
     let compare = Int.compare
-    let weight (a, b) = Int.abs @@ TileInfo.hist a - TileInfo.hist b
+    let weight (a, b) = Int.abs @@ TileInfo.(a.hist - b.hist)
     let add a b = a + b
     let zero = 0
 end
@@ -44,53 +50,10 @@ module type Rectangle = sig
   val height: int
 end
 
-module HexCoordinate (R:Rectangle) = struct
-
-  type 'a tiles = 'a array
-
-  let get_node x y nodes = nodes.(y * R.width + x)
-
-  let get_index x y = (y * R.width + x)
-
-  let set_node x y node nodes = begin
-    nodes.(y * R.width + x) <- node
-  end
-
-  let set_node_via_idx index node nodes = begin
-    nodes.(index) <- node
-  end
-
-  let siblings (x,y) =
-    let y_offset = if x mod 2 = 1 then 1 else 0 in
-    let top = (x, y-1) in
-    let top_left = (x-1, y-1+y_offset) in
-    let bottom_left = (x-1, y+y_offset) in
-    let top_right = (x+1, y-1+y_offset) in
-    let bottom_right = (x+1, y+y_offset) in
-    let bottom = (x, y+1) in
-    [|top;top_left;bottom_left;bottom;bottom_right;top_right|]
-
-  let sibling_fold target func init nodes =
-    let node = get_node (fst target) (snd target) nodes in
-    let direction = siblings target in
-    let acc, _ = Array.fold_left (fun (acc,idx) (x,y) ->
-      if (x >=0 && y>=0 && x<R.width && y<R.height) then
-        func acc node (get_node x y nodes) idx, idx + 1
-      else (acc, idx+1)
-    ) (init,0) direction in
-    acc
-
-  let fold_with_kernel func init nodes =
-    for y=0 to R.height - 1 do
-      for x=0 to R.width - 1 do
-        sibling_fold (x,y) func init nodes
-      done
-    done
-end
 
 module TileGraph (R:Rectangle) (C:Comparable) = struct
 
-  module HexCoordinate = HexCoordinate (R)
+  module HexCoordinate = HexCoordinate.Make (R)
   open HexCoordinate
 
   include Imperative.Graph.Concrete (C)
@@ -138,7 +101,7 @@ module TileInfoBuilder (R: Rectangle)= struct
 
   module HistPath = Path.Dijkstra (TileInfoGraph) (HistWeight)
 
-  module Coordinate = HexCoordinate (R)
+  module Coordinate = HexCoordinate.Make (R)
 
   let nodes = Array.init (R.width * R.height) (fun _ -> TileInfo.empty_info)
 
@@ -227,17 +190,14 @@ module TileInfoBuilder (R: Rectangle)= struct
 
     (* Initialize vetex *)
     let vetex_gen x y =
-      let cx = x*45 in
-      let cy = y*52 in
-      let cy = if x mod 2 = 0 then cy else cy + 26 in
-      let h = build_hist ls_sand (cx, cy) in
+      let p = Coordinate.layout (x, y) in
+      let h = build_hist ls_sand p in
       TileInfo.({
-        cor=(x,y);
-        cx=cx;
-        cy=cy;
-        index= Coordinate.get_index x y;
-        hist=h;
-        ttype=init_tile h;
+        cor = (x,y);
+        pos = p;
+        index = Coordinate.get_index x y;
+        hist = h;
+        ttype = init_tile h;
       })
     in
 
@@ -251,8 +211,6 @@ module TileInfoBuilder (R: Rectangle)= struct
     TileInfoGraph.init_graph nodes tile_graph vetex_gen edge_gen;
 
   end
-
-
 
 end
 

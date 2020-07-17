@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 var WS = require('websocket').w3cwebsocket
 WS === window.WebSocket
-var universe = require ("./universe.bs.js");
+var universe = require ("../lib/js/universe.bs.js");
 
 function component(map_info) {
   // Lodash, currently included via a script, is required for this line to work
@@ -31,6 +31,7 @@ ws.onmessage = function(event) {
           universe.initialize_coordinate(-50,-50,map.tiles);
           document.getElementById("test").innerHTML = universe.build_tiles(-50,-50,map.tiles)
             + universe.build_npcs(map.npcs);
+          document.getElementById("test").innerHTML += universe.build_menu (0);
         } else if (json.method == "update") {
           var npcs = json.data.updates;
           for (const idx in json.data.updates) {

@@ -1,3 +1,4 @@
+open HexCoordinate
 module Tile = struct
 
   type tile_type = {
@@ -212,3 +213,6 @@ let build_npcs npc_infos =
     svg
   ) npc_infos in
   Array.fold_left (fun acc c -> acc ^ c) "" svgs
+
+let build_menu _ =
+  Printf.sprintf "<use href='/dist/res/menu.svg#main' x='%d' y='%d'/>" 10 10

@@ -1,0 +1,4 @@
+(executable
+ (name main)
+ (libraries ui core npc tiles universe lwt conduit-lwt-unix lwt_ppx websocket-lwt-unix)
+)

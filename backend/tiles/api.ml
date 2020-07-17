@@ -2,6 +2,7 @@ open Core
 open Space
 open Lwt.Syntax
 open Common
+open Ui
 
 module NpcAttr = Npc.Attr
 module Npc = Npc.Api
@@ -102,7 +103,7 @@ let mk_tile name typ quality cor =
   tile
 
 let get_view (cor:coordinate) map =
-  let module Coordinate = Generator.HexCoordinate (struct
+  let module Coordinate = HexCoordinate.Make (struct
       let width=map.width
       let height=map.height
   end) in

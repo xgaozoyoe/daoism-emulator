@@ -1,13 +1,19 @@
 {
   "name": "daoui",
   "version": "0.1.0",
-  "sources": {
+  "sources": [
+  {
+    "dir" : "../backend/ui",
+    "subdirs" : false
+  },
+  {
     "dir" : "src",
     "subdirs" : true
-  },
+  }
+  ],
   "package-specs": {
     "module": "commonjs",
-    "in-source": true
+    "in-source": false
   },
   "suffix": ".bs.js",
   "bs-dependencies": [
