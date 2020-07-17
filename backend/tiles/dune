@@ -1,4 +1,4 @@
 (library
   (name tiles)
-  (libraries ui core npc lwt conduit-lwt-unix ocamlgraph)
+  (libraries utils core npc lwt conduit-lwt-unix ocamlgraph)
 )

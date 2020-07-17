@@ -1,46 +1,3 @@
-open HexCoordinate
-module Tile = struct
-
-  type tile_type = {
-    base:string;
-    features: string array;
-  } [@@bs.deriving abstract]
-
-  type info = {
-    name:string;
-    ttype:tile_type;
-    hist:int;
-  } [@@bs.deriving abstract]
-
-  type t = {
-    tid:string;
-    center: int * int;
-  }
-
-  type tiles = {
-     width: int;
-     height: int;
-     tiles: info array;
-  }[@@bs.deriving abstract]
-
-  let mk_tile tid center = {tid=tid; center= center}
-end
-
-module Npc = struct
-  type location = {
-    x:int;
-    y:int;
-  }[@@bs.deriving abstract]
-  type state = {
-    description:string;
-  }[@@bs.deriving abstract]
-  type t = {
-    name:string;
-    state:state;
-    loc:location;
-  }[@@bs.deriving abstract]
-end
-
 type coordinate_info = {
   cor_to_index: (int * int) -> int;
   cor_to_pos: (int * int) -> (int * int);
@@ -52,21 +9,18 @@ let get_the = function
   | Some a -> a
   | None -> raise Not_found
 
-
 let initialize_coordinate left top tiles_info =
-  let open Tile in
-  let width = (tiles_info |. widthGet) in
+  let module HexCoordinate = HexCoordinate.Make (struct
+    let width = (tiles_info |. widthGet)
+    let height = (tiles_info |. heightGet)
+  end) in
   let coordinate_to_pos (x, y) =
-    let cx = x*45 in
-    let cy = y*52 in
-    let cy = if x mod 2 = 0 then cy else cy + 26 in
+    let (cx, cy) = HexCoordinate.layout (x,y) in
     cx+left, cy+top
-  in
-  let coordinate_to_index (x, y) = y*width + x
   in
   coordinate_system := Some {
     cor_to_pos = coordinate_to_pos;
-    cor_to_index = coordinate_to_index;
+    cor_to_index = fun (x,y) -> HexCoordinate.get_index x y;
   }
 
 module IdMap = Map.Make(String)

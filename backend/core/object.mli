@@ -1,10 +1,11 @@
 open UID
+open Utils
 type t = <
   get_name: string;
   get_uid: UID.t;
   get_env: (Feature.t * t) Environ.t;
-  get_loc: Space.coordinate;
-  set_loc: Space.coordinate -> unit;
+  get_loc: HexCoordinate.t;
+  set_loc: HexCoordinate.t -> unit;
   get_command: Attribute.t option;
   set_command: Attribute.t option -> unit;
   take_features: Feature.t array -> unit;
@@ -13,16 +14,16 @@ type t = <
   handle_event: t Space.t -> t array -> Feature.t -> (Feature.t * t array * t) list Lwt.t
 >
 
-class virtual elt: string -> Space.coordinate -> object
+class virtual elt: string -> HexCoordinate.t -> object
   val name: string
   val uid: UID.t
-  val mutable loc: Space.coordinate
+  val mutable loc: HexCoordinate.t
   val mutable env: (Feature.t * t) Environ.t
   val mutable modifier: Modifier.t list
   method get_name: string
   method get_uid: UID.t
-  method get_loc: Space.coordinate
-  method set_loc: Space.coordinate -> unit
+  method get_loc: HexCoordinate.t
+  method set_loc: HexCoordinate.t -> unit
   method take_features: Feature.t array -> unit
   method get_env: (Feature.t * t) Environ.t
   method get_command: Attribute.t option

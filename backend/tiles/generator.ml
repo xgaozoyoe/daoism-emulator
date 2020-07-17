@@ -1,5 +1,5 @@
 open Graph
-open Ui
+open Utils
 
 let _ = Random.self_init ()
 

@@ -2,7 +2,7 @@ open Core
 open Space
 open Lwt.Syntax
 open Common
-open Ui
+open Utils
 
 module NpcAttr = Npc.Attr
 module Npc = Npc.Api
@@ -102,7 +102,7 @@ let mk_tile name typ quality cor =
   Default.set_default_bound quality typ 10 tile;
   tile
 
-let get_view (cor:coordinate) map =
+let get_view (cor:HexCoordinate.t) map =
   let module Coordinate = HexCoordinate.Make (struct
       let width=map.width
       let height=map.height
@@ -111,7 +111,7 @@ let get_view (cor:coordinate) map =
     Option.get sibling :: acc
   ) [] map.tiles
 
-let get_tile (cor:coordinate) map =
+let get_tile (cor:HexCoordinate.t) map =
   let (x, y) = cor in
   map.tiles.(y* map.width + x)
 

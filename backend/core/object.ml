@@ -1,9 +1,10 @@
 open UID
+open Utils
 type t = <
   get_name: string;
   get_uid: UID.t;
-  get_loc: Space.coordinate;
-  set_loc: Space.coordinate -> unit;
+  get_loc: HexCoordinate.t;
+  set_loc: HexCoordinate.t -> unit;
   get_env: (Feature.t * t)  Environ.t;
   get_command: Attribute.t option;
   set_command: Attribute.t option -> unit;
@@ -13,7 +14,7 @@ type t = <
   handle_event: t Space.t -> t array -> Feature.t -> (Feature.t * (t array) * t) list Lwt.t
 >
 
-class virtual elt n (loc:Space.coordinate) = object
+class virtual elt n (loc:HexCoordinate.t) = object
 
   val name = n
   val uid = UID.of_string n
