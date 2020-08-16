@@ -126,6 +126,14 @@ module Make (R:Rectangle) = struct
       done
     done
 
+  let iter func nodes =
+    for y=0 to R.height - 1 do
+      for x=0 to R.width - 1 do
+        let node = get_node x y nodes in
+        func x y node
+      done
+    done
+
   let layout (x,y) =
     let lgap = 45 in
     let tgap = 52 in
