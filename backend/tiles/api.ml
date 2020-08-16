@@ -2,7 +2,6 @@ open Core
 open Space
 open Lwt.Syntax
 open Common
-open Utils
 
 module NpcAttr = Npc.Attr
 module Npc = Npc.Api
@@ -88,13 +87,6 @@ class elt n ttype cor ds = object (self)
   end
 end
 
-type map = {
-  tiles: (Object.t option) array;
-  width: int;
-  height: int;
-  mutable path: Object.t array -> Object.t array -> Object.t array
-}
-
 let mk_tile name typ quality cor =
   let tile = new elt name typ cor (
     Default.make_default_state quality typ (Timer.of_int 4)
@@ -102,61 +94,4 @@ let mk_tile name typ quality cor =
   Default.set_default_bound quality typ 10 tile;
   tile
 
-let get_view (cor:HexCoordinate.t) map =
-  let module Coordinate = HexCoordinate.Make (struct
-      let width=map.width
-      let height=map.height
-  end) in
-  Coordinate.sibling_fold cor (fun acc _ sibling _ ->
-    Option.get sibling :: acc
-  ) [] map.tiles
 
-let get_tile (cor:HexCoordinate.t) map =
-  let (x, y) = cor in
-  map.tiles.(y* map.width + x)
-
-let mk_map width height: map = {
-    tiles = Array.make (width * height) None;
-    width = width;
-    height = height;
-    path = fun _ _ -> [||]
-  }
-
-let init_map space map rule_config =
-  Printexc.record_backtrace true;
-  let module Generator = Generator.TileInfoBuilder (struct
-      let width=map.width
-      let height=map.height
-   end) in
-
-  (* Initialize tile graph *)
-  Generator.init_graph 4;
-
-  (* Initialize rivers *)
-  Generator.build_rivers 2;
-  Generator.build_features 2;
-
-  let tiles_info = Generator.nodes in
-  for i = 0 to (map.width * map.height - 1) do
-    let info = tiles_info.(i) in
-    let tile_type = info.ttype in
-    let quality = Quality.Normal in
-    let tile_name = Printf.sprintf "tile_%d" i in
-    let tile = mk_tile tile_name tile_type quality info.cor in
-    let rules = rule_config tile_type in
-    Array.iter (fun rule -> Environ.install_rule rule tile#get_env) rules;
-    map.tiles.(i) <- Some tile;
-    space.register_event (Timer.of_int 5) tile;
-  done;
-  map
-
-let to_json map =
-  `Assoc [
-    ("width", `Int map.width);
-    ("height", `Int map.height);
-    ("tiles",
-       `List (Array.fold_left (fun acc c->
-          acc @ [(Option.get c)#to_json]
-        ) [] map.tiles)
-    )
-  ]

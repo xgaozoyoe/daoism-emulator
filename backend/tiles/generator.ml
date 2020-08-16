@@ -63,7 +63,7 @@ module TileGraph (R:Rectangle) (C:Comparable) = struct
     for y=0 to R.height - 1 do
       for x=0 to R.width - 1 do
         let node = vgen x y in
-        set_node x y node nodes;
+        set_node (x, y) node nodes;
         add_vertex graph node
       done
     done;
@@ -71,20 +71,20 @@ module TileGraph (R:Rectangle) (C:Comparable) = struct
     for y=0 to R.height - 1 do
       for x=0 to R.width - 1 do
         (* anti clockwise get the adjacent tiles *)
-        let c_node = get_node x y nodes in
+        let c_node = get_node (x, y) nodes in
         if y - 1 >= 0 then begin
-          let node = get_node x (y - 1) nodes in
+          let node = get_node (x, (y - 1)) nodes in
           add_edge graph c_node node
         end;
         let y_offset = if x mod 2 = 1 then 1 else 0 in
         if x - 1 >= 0 then begin
           if (y - 1 + y_offset >= 0 && y - 1 + y_offset < R.height )
           then begin
-            let node = get_node (x - 1) (y - 1 + y_offset) nodes in
+            let node = get_node ((x - 1), (y - 1 + y_offset)) nodes in
             add_edge graph c_node node
           end;
           if (y + y_offset < R.height) then begin
-            let node = get_node (x - 1) (y + y_offset) nodes in
+            let node = get_node ((x - 1), (y + y_offset)) nodes in
             if egen c_node node then
               add_edge graph c_node node
             else ()
@@ -150,10 +150,10 @@ module TileInfoBuilder (R: Rectangle)= struct
 
     (* Generate rivers *)
     let n1,_ = Array.fold_left (fun (n, hist) (c:TileInfo.t) -> if c.hist > hist then
-        c, c.hist else n, hist) (Coordinate.get_node 0 0 nodes, 0) nodes in
+        c, c.hist else n, hist) (Coordinate.get_node (0, 0) nodes, 0) nodes in
 
     let n2,_ = Array.fold_left (fun (n, hist) (c:TileInfo.t) -> if c.hist < hist then
-        c, c.hist else n, hist) (Coordinate.get_node 0 0 nodes, 1000) nodes in
+        c, c.hist else n, hist) (Coordinate.get_node (0, 0) nodes, 1000) nodes in
 
     let edges , _ = HistPath.shortest_path tile_graph n2 n1 in
 
@@ -195,7 +195,7 @@ module TileInfoBuilder (R: Rectangle)= struct
       TileInfo.({
         cor = (x,y);
         pos = p;
-        index = Coordinate.get_index x y;
+        index = Coordinate.get_index (x, y);
         hist = h;
         ttype = init_tile h;
       })

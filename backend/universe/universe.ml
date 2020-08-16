@@ -2,28 +2,62 @@ open Lwt.Syntax
 module Apprentice = Npc.Apprentice
 module Creature = Npc.Creature
 module Npc = Npc.Api
-module TilesApi = Tiles.Api
-
+module Tile = Tiles.Api
+open Utils
 open Core
 
 module ID = UID.Make(UID.Id)
 module ObjectSet = Set.Make (Object)
 
 type config = {
-  tile_rule: unit
+  tile_rule: unit;
+  map_width: int;
+  map_height: int;
 }
 
-let default_config _ = {tile_rule = ()}
+let default_config _ = {
+  tile_rule = ();
+  map_width = 32;
+  map_height = 16;
+}
+
+let init_map space map_config rule_config =
+  let module Generator = Tiles.Generator.TileInfoBuilder (struct
+      let width = map_config.map_width
+      let height = map_config.map_height
+  end) in
+  let open Space in
+
+  (* Initialize tile graph *)
+  Generator.init_graph 4;
+
+  (* Initialize rivers *)
+  Generator.build_rivers 2;
+  Generator.build_features 2;
+
+  let tiles_info = Generator.nodes in
+  Array.init (Array.length tiles_info) (fun i ->
+    let info = tiles_info.(i) in
+    let tile_type = info.ttype in
+    let quality = Quality.Normal in
+    let tile_name = Printf.sprintf "tile_%d" i in
+    let tile = Tile.mk_tile tile_name tile_type quality info.cor in
+    let rules = rule_config tile_type in
+    Array.iter (fun rule -> Environ.install_rule rule tile#get_env) rules;
+    space.register_event (Timer.of_int 5) tile;
+    tile
+  )
 
 class elt n = object(self)
 
   inherit Object.elt n (-1,-1)
 
-  val mutable map: TilesApi.map = TilesApi.mk_map 32 16
-  val mutable events: Event.t list = []
   val npcs:(ID.t, Object.t) Hashtbl.t = Hashtbl.create 10
+  val mutable tiles = [||]
+  val mutable events: Event.t list = []
   val mutable event_queue = Timer.TriggerQueue.empty
   val mutable update = ObjectSet.empty
+  val config = default_config ()
 
   method get_update: Yojson.Basic.t =
     let objs = ObjectSet.fold (fun v acc ->
@@ -31,17 +65,25 @@ class elt n = object(self)
     ) update [] in
     `Assoc [ ("updates", `List objs) ]
 
-  method space: Object.t Space.t = let open Space in
-  {
-    get_path = (fun _ _ -> [||]);
-    the_universe = (fun _ -> (self :> Object.t));
-    cancel_event = (fun _ -> ());
-    register_event = (fun t o ->
-      event_queue <- Timer.TriggerQueue.register_event t o event_queue);
-    get_view = (fun cor -> TilesApi.get_view cor map);
-    get_tile = (fun cor -> TilesApi.get_tile cor map);
-    set_active = (fun o -> update <- ObjectSet.add o update);
-  }
+  method space: Object.t Space.t =
+    let open Space in
+    let module Coordinate = HexCoordinate.Make (struct
+      let width = config.map_width
+      let height = config.map_height
+    end) in
+    {
+      get_path = (fun _ _ -> [||]);
+      the_universe = (fun _ -> (self :> Object.t));
+      cancel_event = (fun _ -> ());
+      register_event = (fun t o ->
+        event_queue <- Timer.TriggerQueue.register_event t o event_queue);
+      get_view = (fun cor ->
+        Coordinate.sibling_fold cor (fun acc _ sibling _ ->
+          sibling :: acc
+      ) [] tiles);
+      get_tile = (fun cor -> Some (Coordinate.get_node cor tiles));
+      set_active = (fun o -> update <- ObjectSet.add o update);
+    }
 
   method to_json =
     let seq = List.of_seq @@ Hashtbl.to_seq npcs in
@@ -49,7 +91,13 @@ class elt n = object(self)
       acc @ [v#to_json]
     ) [] seq in
     `Assoc [
-        ("tiles", TilesApi.to_json (map))
+        ("world", `Assoc [
+            ("width", `Int config.map_width);
+            ("height", `Int config.map_height);
+        ])
+      ; ("tiles", `List (Array.fold_left (fun acc c->
+          acc @ [c#to_json]
+        ) [] tiles))
       ; ("npcs", `List npcs)
     ]
 
@@ -121,9 +169,9 @@ class elt n = object(self)
   method handle_event _ _ _ = Lwt.return []
 
   method init (_:unit) =
+    Printexc.record_backtrace true;
     let space = self#space in
-    map <- TilesApi.init_map space map (TileRule.tile_rule self)
-
+    tiles <- init_map space config (TileRule.tile_rule self)
 
 end
 

@@ -21,11 +21,11 @@ module Make (R:Rectangle) = struct
   | BottomRight -> 4
   | TopRight -> 5
 
-  let get_node x y nodes = nodes.(y * R.width + x)
+  let get_node (x, y) nodes = nodes.(y * R.width + x)
 
-  let get_index x y = (y * R.width + x)
+  let get_index (x, y) = (y * R.width + x)
 
-  let set_node x y node nodes = begin
+  let set_node (x, y) node nodes = begin
     nodes.(y * R.width + x) <- node
   end
 
@@ -110,11 +110,11 @@ module Make (R:Rectangle) = struct
     tr_ray @ br_ray @ b_ray @ bl_ray @ tl_ray @ t_ray
 
   let sibling_fold target func init nodes =
-    let node = get_node (fst target) (snd target) nodes in
+    let node = get_node target nodes in
     let direction = siblings target in
     let acc, _ = Array.fold_left (fun (acc,idx) (x,y) ->
       if (x >=0 && y>=0 && x<R.width && y<R.height) then
-        func acc node (get_node x y nodes) idx, idx + 1
+        func acc node (get_node (x, y) nodes) idx, idx + 1
       else (acc, idx+1)
     ) (init,0) direction in
     acc
@@ -129,7 +129,7 @@ module Make (R:Rectangle) = struct
   let iter func nodes =
     for y=0 to R.height - 1 do
       for x=0 to R.width - 1 do
-        let node = get_node x y nodes in
+        let node = get_node (x, y) nodes in
         func x y node
       done
     done
