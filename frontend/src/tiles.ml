@@ -14,10 +14,6 @@ module Tile = struct
     hist:int;
   } [@@bs.deriving abstract]
 
-  type tiles = {
-     tiles: info array;
-  }[@@bs.deriving abstract]
-
 end
 
 module WaterPath = struct
@@ -64,13 +60,13 @@ let build_tile name typ_no pos =
   let style = Printf.sprintf "hex_%s" typ_no in
   SvgHelper.mk_hexagon name style pos
 
-let build_tiles _ _ tiles_info uinfo =
+let build_tiles tiles uinfo =
   let open Tile in
   let module HexCoordinate = HexCoordinate.Make (struct
     let width = (uinfo |. widthGet)
     let height = (uinfo |. heightGet)
   end) in
-  Js.log tiles_info;
+  Js.log tiles;
   let svgs = Array.mapi (fun i info ->
     let type_no = info |. ttypeGet |. baseGet in
     let name = info |. nameGet in
@@ -79,5 +75,5 @@ let build_tiles _ _ tiles_info uinfo =
     let svg = build_tile name type_no layout in
     let tile_feature = info |. ttypeGet |. featuresGet in
     Array.fold_left (fun svg f -> svg ^ (build_feature layout f)) svg tile_feature
-  ) (tiles_info |. tilesGet) in
+  ) tiles in
   Array.fold_left (fun acc c -> acc ^ c) "" svgs

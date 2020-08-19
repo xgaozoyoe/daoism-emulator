@@ -19,9 +19,11 @@
     "webpack-dev-server": "^3.10.3"
   },
   "dependencies": {
+    "@svgdotjs/svg.js": "^3.0.16",
     "jsx": "^0.9.89",
     "react": "^16.13.1",
     "react-websocket": "^2.1.0",
+    "svg.pan-zoom.js": "^2.8.0",
     "webpack": "^4.43.0",
     "websocket": "^1.0.31"
   }

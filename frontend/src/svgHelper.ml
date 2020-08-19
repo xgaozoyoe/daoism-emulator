@@ -7,7 +7,7 @@ let mk_hexagon name r (cx, cy) =
     "%d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d"
     x0 y0 x1 y1 x2 y2 x3 y3 x4 y4 x5 y5 x0 y0
   in
-  Printf.sprintf "<polygon id='%s' class='hex_%s' points='%s'></polygon>"
+  Printf.sprintf "<polygon id='%s' class='%s' points='%s'></polygon>"
     name r points
 
 let mk_text center txt =

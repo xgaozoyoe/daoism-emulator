@@ -35,12 +35,12 @@ let build_npc info uinfo =
   let hint = SvgHelper.mk_text layout desc in
   SvgHelper.mk_group name (icon ^ hint)
 
-let build_npcs npc_infos uinfo =
+let build_npcs npcs uinfo =
   let svgs = Array.mapi (fun i _ ->
-    let info = npc_infos.(i) in
+    let info = npcs.(i) in
     let svg = build_npc info uinfo in
     svg
-  ) npc_infos in
+  ) npcs in
   Array.fold_left (fun acc c -> acc ^ c) "" svgs
 
 

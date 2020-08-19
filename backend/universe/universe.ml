@@ -59,12 +59,6 @@ class elt n = object(self)
   val mutable update = ObjectSet.empty
   val config = default_config ()
 
-  method get_update: Yojson.Basic.t =
-    let objs = ObjectSet.fold (fun v acc ->
-      acc @ [v#to_json]
-    ) update [] in
-    `Assoc [ ("updates", `List objs) ]
-
   method space: Object.t Space.t =
     let open Space in
     let module Coordinate = HexCoordinate.Make (struct
@@ -84,6 +78,19 @@ class elt n = object(self)
       get_tile = (fun cor -> Some (Coordinate.get_node cor tiles));
       set_active = (fun o -> update <- ObjectSet.add o update);
     }
+
+  method get_update: Yojson.Basic.t =
+    let objs = ObjectSet.fold (fun v acc ->
+      acc @ [v#to_json]
+    ) update [] in
+    `Assoc [
+      ("world", `Assoc [
+          ("width", `Int config.map_width);
+          ("height", `Int config.map_height);
+        ]
+      )
+      ; ("updates", `List objs)
+    ]
 
   method to_json =
     let seq = List.of_seq @@ Hashtbl.to_seq npcs in
