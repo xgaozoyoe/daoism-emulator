@@ -1,14 +1,11 @@
-type t =
-  | Apprentice
-  | Creature
-  | Mob
-  | God
+type 'a t =
+  | Apprentice of ('a -> 'a)
+  | Creature of ('a -> 'a)
+  | Mob of ('a -> 'a)
+  | God of ('a -> 'a)
 
 let to_string p = match p with
-    | Apprentice -> "Apprentice"
-    | Creature -> "Creature"
-    | Mob -> "Mob"
-    | God -> "God"
-
-let category _ = "Spawn"
-
+    | Apprentice _ -> "Apprentice"
+    | Creature _ -> "Creature"
+    | Mob _ -> "Mob"
+    | God _ -> "God"

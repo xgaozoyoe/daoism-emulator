@@ -11,5 +11,3 @@ let to_string wx = match wx with
   | Shui -> "水"
   | Huo -> "火"
   | Tu -> "土"
-
-let category _ = "WuXing"

@@ -8,7 +8,7 @@
   },
   {
     "dir" : "src",
-    "subdirs" : true
+    "subdirs" : true,
   }
   ],
   "package-specs": {
@@ -16,8 +16,11 @@
     "in-source": false
   },
   "suffix": ".bs.js",
+
   "bs-dependencies": [
+    "bs-webapi"
   ],
+
   "warnings": {
     "error" : "+101"
   },

@@ -32,10 +32,10 @@ class elt n ttype cor ds = object (self)
     let src = src.(0) in
     let* _ = Logger.log "[ %s handles event %s from %s]\n" (self#get_name) (Feature.to_string feature) (src#get_name) in
     match feature with
-    | Hold (attr, _) when attr#test "Status" -> begin
-        let _ = match attr#name with
-        | "enter" -> src#set_loc self#get_loc; holds <- src :: holds
-        | "leave" -> holds <- List.filter_map (fun c ->
+    | Hold (Object attr, _) -> begin
+        let _ = match attr with
+        | Enter -> src#set_loc self#get_loc; holds <- src :: holds
+        | Leave -> holds <- List.filter_map (fun c ->
             if (c#get_name = src#get_name) then None else Some c
           ) holds
         | _ -> ()
@@ -43,17 +43,6 @@ class elt n ttype cor ds = object (self)
         Lwt.return []
       end
     | _ -> Lwt.return []
-
-    (*
-    let adjacent_events = List.fold_left (fun acc t ->
-      let others = List.filter_map (fun c ->
-            if (c#get_name = t#get_name) then None else Some c
-      ) holds in
-      match others with
-      | [] -> acc
-      | _ -> acc @ [(Feature.mk_hold (NpcAttr.mk_tile_attr ()) 1, Array.of_list others, t)]
-    ) [] holds in
-    *)
   end
 
   (* step universe space -> event list *)

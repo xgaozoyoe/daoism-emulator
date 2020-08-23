@@ -14,6 +14,13 @@ module Tile = struct
     hist:int;
   } [@@bs.deriving abstract]
 
+  let display_info info =
+    [|
+      "name", info |. nameGet;
+      "type", info |. ttypeGet |. baseGet;
+      "hist", Printf.sprintf "%d" (info |. histGet)
+    |]
+
 end
 
 module WaterPath = struct
@@ -60,7 +67,12 @@ let build_tile name typ_no pos =
   let style = Printf.sprintf "hex_%s" typ_no in
   SvgHelper.mk_hexagon name style pos
 
-let build_tiles tiles uinfo =
+let handle_click info () =
+  let menu = Document.get_by_id Document.document "menu" in
+  let innerHTML = Menu.build_menu (Tile.display_info info) in
+  Document.setInnerHTML menu innerHTML
+
+let build_tiles tiles uinfo container=
   let open Tile in
   let module HexCoordinate = HexCoordinate.Make (struct
     let width = (uinfo |. widthGet)
@@ -76,4 +88,11 @@ let build_tiles tiles uinfo =
     let tile_feature = info |. ttypeGet |. featuresGet in
     Array.fold_left (fun svg f -> svg ^ (build_feature layout f)) svg tile_feature
   ) tiles in
-  Array.fold_left (fun acc c -> acc ^ c) "" svgs
+  let innerHTML = Array.fold_left (fun acc c -> acc ^ c) "" svgs in
+  Document.setInnerHTML container innerHTML;
+  (* Register event handler for tiles *)
+  Array.map (fun info ->
+    let name = info |. nameGet in
+    let item = Document.get_by_id Document.document name in
+    Document.add_event_listener item "click" (handle_click info)
+  ) tiles

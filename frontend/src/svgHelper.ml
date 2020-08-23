@@ -1,3 +1,11 @@
+let mk_rectangle (w,h) (cx, cy) =
+  let points = Printf.sprintf
+    "%d,%d %d,%d %d,%d %d,%d %d,%d"
+    cx cy (cx+w) cy (cx+w) (cy+h) cx (cy+h) cx cy
+  in
+  Printf.sprintf "<polygon class='menu' points='%s'></polygon>"
+    points
+
 let mk_hexagon name r (cx, cy) =
   let points = ((cx-30, cy), (cx-15, cy-26), (cx+15, cy-26),
     (cx+30, cy), (cx+15, cy+26), (cx-15, cy+26))
@@ -10,8 +18,8 @@ let mk_hexagon name r (cx, cy) =
   Printf.sprintf "<polygon id='%s' class='%s' points='%s'></polygon>"
     name r points
 
-let mk_text center txt =
-  Printf.sprintf "<text x='%d' y='%d'>%s</text>" (fst center) (snd center) txt
+let mk_text style center txt =
+  Printf.sprintf "<text x='%d' y='%d' class='%s'>%s</text>" (fst center) (snd center) style txt
 
 let mk_line (x1,y1) (x2,y2) =
   Printf.sprintf "<line x1='%f' y1='%f' x2='%f' y2='%f' class='river' />"

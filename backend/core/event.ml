@@ -1,7 +1,7 @@
 type t = {
   src: Object.t array;
   target: Object.t;
-  feature: Feature.t;
+  feature: Object.t Feature.t;
 }
 
 let get_source t = t.src

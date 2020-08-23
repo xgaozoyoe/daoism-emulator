@@ -140,30 +140,25 @@ class elt n = object(self)
     let* _ = Lwt_list.iter_s (fun e ->
       let feature = Event.get_feature e in
       match feature with
-      | Feature.Produce (attr, _) -> begin
-          match attr#category with
-          | "Spawn" when Population.try_spawn () -> begin
-              Population.increase_population ();
-              match attr#name with
-              | "Apprentice" -> begin
-                  let obj = Apprentice.mk_apprentice (Event.get_source e).(0) in
-                  Hashtbl.add npcs (ID.of_string obj#get_name) (obj:>Object.t);
-                  let x,y = obj#get_loc in
-                  let* _ = Lwt_io.printf "spawn at location (%d,%d)\n" x y in
-                  Lwt.return @@ space.register_event (Timer.of_int 1) (obj:>Object.t)
-                end
-              | "Creature" -> begin
-                  let obj = Creature.mk_creature (Event.get_source e).(0) in
-                  Hashtbl.add npcs (ID.of_string obj#get_name) (obj:>Object.t);
-                  let x,y = obj#get_loc in
-                  let* _ = Lwt_io.printf "spawn at location (%d,%d)\n" x y in
-                  Lwt.return @@ space.register_event (Timer.of_int 1) (obj:>Object.t)
-                end
-              | _ -> Lwt.return ()
-            end
-          | _ -> Lwt.return ()
+      | Feature.Produce (Attribute.Api.Spawn attr, _)
+        when Population.try_spawn () -> begin
+          Population.increase_population ();
+          let obj = match attr with
+          | Attribute.Spawn.Apprentice crk ->
+              crk (Event.get_source e).(0)
+          | Attribute.Spawn.Creature crk ->
+              crk (Event.get_source e).(0)
+          | Attribute.Spawn.Mob crk ->
+              crk (Event.get_source e).(0)
+          | Attribute.Spawn.God crk ->
+              crk (Event.get_source e).(0)
+          in
+          Hashtbl.add npcs (ID.of_string obj#get_name) (obj:>Object.t);
+          let x,y = obj#get_loc in
+          let* _ = Lwt_io.printf "spawn at location (%d,%d)\n" x y in
+          Lwt.return @@ space.register_event (Timer.of_int 1) (obj:>Object.t)
         end
-      | Feature.Hold (attr, _) when attr#test "Status" && attr#name = "dead" ->
+      | Feature.Hold (Attribute.Api.Object Attribute.Api.Dead, _) ->
         let npc = (Event.get_source e).(0) in
         Lwt.return @@ Hashtbl.remove npcs (ID.of_string npc#get_name)
       | _ -> Lwt.return ()

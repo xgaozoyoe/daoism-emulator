@@ -1,10 +1,8 @@
 open Lwt.Syntax
-
-module AttributeDamage = Core.Attribute.From(Attribute.Damage)
-module DamageAttr = Attribute.Damage
+module AttributeDamage = Attribute.Damage
+module Attribute = Attribute.Api
 
 open Core
-open UID
 open Common
 
 class elt n ds (tile:Object.t) = object (self)
@@ -29,7 +27,7 @@ class elt n ds (tile:Object.t) = object (self)
 
   method handle_event space src feature = begin
     match feature with
-    | Produce (attr, dmg) when attr#test "Damage" ->
+    | Produce (Damage _, dmg) ->
       let src = src.(0) in
       let* _ = Lwt_io.printf "%s 受到了来自 %s 的 %d 点攻击\n"
         self#get_name src#get_name dmg in
@@ -42,10 +40,10 @@ class elt n ds (tile:Object.t) = object (self)
         Lwt.return []
       end else
         Lwt.return []
-    | Hold (attr, _) when attr#test "Adjacent" ->
+    | Hold (Attribute.Object Meet, _)  ->
       Lwt.return [Feature.mk_produce
         (* FIXME: src might be empty ? *)
-        (new AttributeDamage.ext_attr DamageAttr.Straight) 1, [|(self :> Object.t)|], src.(0)]
+        (Attribute.Damage AttributeDamage.Straight) 1, [|(self :> Object.t)|], src.(0)]
     | _ -> Lwt.return []
   end
 
@@ -73,8 +71,3 @@ class elt n ds (tile:Object.t) = object (self)
     Lwt.return events
   end
 end
-
-let get_npcs obj obj_map =
-  let open Object in
-  let attrs = Environ.filter_feature "Npc" obj#get_env in
-  List.map (fun (c:Attribute.t) -> obj_map.get_obj (UID.of_string c#name)) attrs

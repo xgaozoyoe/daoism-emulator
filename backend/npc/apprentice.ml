@@ -1,10 +1,5 @@
-module AttributeWuXing = Core.Attribute.From(Attribute.WuXing)
-module AttributeBase = Core.Attribute.From(Attribute.Base)
-module AttributeSpawn = Core.Attribute.From(Attribute.Spawn)
-
 open Core
 open Common
-
 let _ = Random.self_init ()
 
 let make_state quality = fun state space self ->
@@ -30,7 +25,9 @@ let mk_apprentice tile =
     let name = Core.Name.gen_name "Apprentice" in
     new Api.elt name (make_state Quality.Normal) tile
 
-let apprentice_rule oref : (Feature.t * Object.t) Environ.rule =
-    let apprentice = new AttributeSpawn.ext_attr Apprentice in
-    [| new AttributeWuXing.ext_attr Jing, 3 |]
+let apprentice_rule oref : Object.t Environ.rule =
+    let apprentice = Attribute.Spawn
+      (AttributeSpawn.Apprentice mk_apprentice)
+    in
+    [| Attribute.WuXing AttributeWuXing.Jing, 3 |]
     , (Feature.mk_produce apprentice 1, oref)

@@ -1,2 +1,2 @@
-type t
-val mk_modifier: (Feature.t -> bool) -> (Feature.t list -> int -> int) -> t
+type 'a t
+val mk_modifier: ('a Feature.t -> bool) -> ('a Feature.t list -> int -> int) -> 'a t

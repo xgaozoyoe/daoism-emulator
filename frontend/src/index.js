@@ -13,15 +13,15 @@ ws.onopen = function() {
 var connected = false;
 var tiles = null;
 ws.onmessage = function(event) {
+    var tiles_container = document.getElementById("tiles");
+    var npcs_container = document.getElementById("npcs");
     if (connected) {
         console.log(event.data);
         var json = JSON.parse(event.data);
         if (json.method == "global") {
-          var ihtml = "";
           var global = json.data;
-          document.getElementById("test").innerHTML = universe.build_tiles(global.tiles, global.world)
-            + universe.build_npcs(global.npcs, global.world);
-          document.getElementById("test").innerHTML += universe.build_menu (0);
+          universe.build_tiles(global.tiles, global.world, tiles_container);
+          universe.build_npcs(global.npcs, global.world, npcs_container);
         } else if (json.method == "update") {
           var npcs = json.data.updates;
           var world = json.data.world;
@@ -29,9 +29,9 @@ ws.onmessage = function(event) {
             console.log(npcs[idx].name);
             var element = document.getElementById(npcs[idx].name, world);
             if (element) {
-              element.outerHTML = universe.build_npc(npcs[idx], world);
+              universe.update_npc(npcs[idx], world);
             } else {
-              document.getElementById("test").innerHTML += universe.build_npc(npcs[idx], world)
+              universe.add_npc(npcs[idx], world, npcs_container);
             }
           }
         } else {
@@ -42,6 +42,10 @@ ws.onmessage = function(event) {
         console.log(event.json);
     }
 };
+
+var focus = function(id) {
+  alert (id);
+}
 
 window.fetch_status_data = function() {
   if (ws.readyState == WS.OPEN) {
@@ -67,8 +71,7 @@ document.getElementById("svg-container").onmouseup = function (e) {
   var y = e.clientY;
   var matrix = this.createSVGMatrix();
   matrix = matrix.translate (trans[0] + x - startCoords[0], trans[1] + y - startCoords[1]);
-  console.log(x-startCoords[0]);
-  document.getElementById("test").transform.baseVal.getItem(0).setMatrix(matrix);
+  document.getElementById("map").transform.baseVal.getItem(0).setMatrix(matrix);
   trans = [
         trans[0] + e.clientX- startCoords[0], // set last coordinates
         trans[1] + e.clientY- startCoords[1]
@@ -90,8 +93,7 @@ document.getElementById("svg-container").onmousemove = function (e)
     // 0  0  1
     var matrix = this.createSVGMatrix();
     matrix = matrix.translate (trans[0] + x - startCoords[0], trans[1] + y - startCoords[1]);
-    console.log(x-startCoords[0]);
-    document.getElementById("test").transform.baseVal.getItem(0).setMatrix(matrix);
+    document.getElementById("map").transform.baseVal.getItem(0).setMatrix(matrix);
 }
 
 

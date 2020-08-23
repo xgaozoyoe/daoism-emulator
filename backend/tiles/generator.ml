@@ -133,7 +133,7 @@ module TileInfoBuilder (R: Rectangle)= struct
     let open TileInfo in
     let features = Array.init (R.width * R.height) (fun _ -> true) in
     Coordinate.fold_with_kernel (fun _ node sibling _ ->
-      features.(node.index) <- features.(node.index) && node.hist >= sibling.hist
+      features.(node.index) <- features.(node.index) && node.hist > sibling.hist
     ) () nodes;
     ignore @@ Array.map (fun node ->
       if (features.(node.index) == true) then

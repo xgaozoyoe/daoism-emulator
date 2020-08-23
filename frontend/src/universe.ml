@@ -19,9 +19,7 @@ let map_info:t = {
   npcs = IdMap.empty;
 }
 
-let build_menu _ =
-  Printf.sprintf "<use href='/dist/res/menu.svg#main' x='%d' y='%d'/>" 10 10
-
 let build_tiles = Tiles.build_tiles
 let build_npcs = Npcs.build_npcs
-let build_npc = Npcs.build_npc
+let add_npc = Npcs.add_npc
+let update_npc = Npcs.update_npc

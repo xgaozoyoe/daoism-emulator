@@ -1,6 +1,7 @@
-module AttributeWuXing = Core.Attribute.From(Attribute.WuXing)
-module AttributeBase = Core.Attribute.From(Attribute.Base)
-module AttributeSpawn = Core.Attribute.From(Attribute.Spawn)
+module AttributeWuXing = Attribute.WuXing
+module AttributeBase = Attribute.Base
+module AttributeSpawn = Attribute.Spawn
+module Attribute = Attribute.Api
 
 open Core
 open Attr
@@ -8,7 +9,7 @@ open Quality
 
 type npc_state = {
   description: string;
-  deliver: (Feature.t * Object.t option) array;
+  deliver: ((Object.t Feature.t) * Object.t option) array;
   health: int;
 }
 
@@ -29,16 +30,15 @@ let quality_to_total = function
 
 let make_basic_features total =
   let open Core in
-  let open AttributeWuXing in
   let ratio = [|Random.int 10; Random.int 10; Random.int 10; Random.int 10; Random.int 10|] in
   let sum = Array.fold_left (fun acc c -> c + acc) 0 ratio in
   let ratio = Array.map (fun c -> (c * total) / sum) ratio in
   let wx = [|
-      new ext_attr Jing;
-      new ext_attr Mu;
-      new ext_attr Shui;
-      new ext_attr Huo;
-      new ext_attr Tu;
+      Attribute.WuXing Jing;
+      Attribute.WuXing Mu;
+      Attribute.WuXing Shui;
+      Attribute.WuXing Huo;
+      Attribute.WuXing Tu;
   |] in
   Array.map2 (fun amount wx -> Feature.mk_produce wx amount) ratio wx
 
@@ -50,14 +50,14 @@ let move_state state src target =
   let es = begin
     if src = target then [||]
     else [|
-      Feature.mk_hold (mk_status_attr "leave") 1, Some src
-      ; Feature.mk_hold (mk_status_attr "enter") 1, Some target
+      Feature.mk_hold (mk_obj_attr Attribute.Leave) 1, Some src
+      ; Feature.mk_hold (mk_obj_attr Attribute.Enter) 1, Some target
     |]
   end in
   { state with deliver = es; description = "移动"}, Timer.of_int 4
 
 let explore_state state universe =
-  let es = [|Feature.mk_hold (mk_status_attr "stay") 1, Some universe|] in
+  let es = [|Feature.mk_hold (mk_obj_attr Attribute.Stay) 1, Some universe|] in
   { state with deliver = es; description = "探索"}, Timer.of_int 5
 
 let idle_state state =
@@ -65,8 +65,8 @@ let idle_state state =
 
 let dead_state state tile universe =
   let es = [|
-    Feature.mk_hold (mk_status_attr "leave") 1, Some tile
-    ; Feature.mk_hold (mk_status_attr "dead") 1, Some universe
+    Feature.mk_hold (mk_obj_attr Attribute.Leave) 1, Some tile
+    ; Feature.mk_hold (mk_obj_attr Attribute.Dead) 1, Some universe
   |] in
   {state with deliver = es; description="死亡"}, Timer.of_int 1
 

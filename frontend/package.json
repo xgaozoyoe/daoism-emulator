@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@svgdotjs/svg.js": "^3.0.16",
+    "bs-webapi": "^0.19.1",
     "jsx": "^0.9.89",
     "react": "^16.13.1",
     "react-websocket": "^2.1.0",

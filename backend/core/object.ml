@@ -1,17 +1,18 @@
 open UID
 open Utils
+module Attribute = Attribute.Api
 type t = <
   get_name: string;
   get_uid: UID.t;
   get_loc: HexCoordinate.t;
   set_loc: HexCoordinate.t -> unit;
-  get_env: (Feature.t * t)  Environ.t;
-  get_command: Attribute.t option;
-  set_command: Attribute.t option -> unit;
-  take_features: Feature.t array -> unit;
+  get_env: t Environ.t;
+  get_command: (t Attribute.t) option;
+  set_command: (t Attribute.t) option -> unit;
+  take_features: (t Feature.t) array -> unit;
   to_json: Yojson.Basic.t;
-  step: t Space.t -> (Feature.t * (t array) * t) list Lwt.t;
-  handle_event: t Space.t -> t array -> Feature.t -> (Feature.t * (t array) * t) list Lwt.t
+  step: t Space.t -> ((t Feature.t) * (t array) * t) list Lwt.t;
+  handle_event: t Space.t -> t array -> t Feature.t -> ((t Feature.t) * (t array) * t) list Lwt.t
 >
 
 class virtual elt n (loc:HexCoordinate.t) = object
@@ -19,9 +20,9 @@ class virtual elt n (loc:HexCoordinate.t) = object
   val name = n
   val uid = UID.of_string n
   val mutable loc = loc
-  val mutable env: (Feature.t * t) Environ.t = Environ.empty []
-  val mutable modifier: Modifier.t list = []
-  val mutable command: Attribute.t option = None
+  val mutable env: t Environ.t = Environ.empty []
+  val mutable modifier: (t Modifier.t) list = []
+  val mutable command: (t Attribute.t) option = None
 
   method get_name = name
   method get_uid = uid
@@ -36,9 +37,9 @@ class virtual elt n (loc:HexCoordinate.t) = object
        Environ.proceed_feature f env
     ) features
 
-  method virtual handle_event: t Space.t -> t array -> Feature.t -> (Feature.t * t array * t) list Lwt.t
+  method virtual handle_event: t Space.t -> t array -> (t Feature.t) -> ((t Feature.t) * t array * t) list Lwt.t
   method virtual to_json: Yojson.Basic.t
-  method virtual step: t Space.t -> (Feature.t * t array * t) list Lwt.t
+  method virtual step: t Space.t -> ((t Feature.t) * t array * t) list Lwt.t
 end
 
 type 'a state_trans = 'a -> t Space.t -> t -> 'a * Timer.slice
@@ -47,7 +48,7 @@ type obj_map = {
   get_obj: UID.t -> t
 }
 
-type pre_event = Feature.t * (t option)
+type pre_event = (t Feature.t) * (t option)
 
 let pre_event_to_json pe =
   let f, obj_opt = pe in

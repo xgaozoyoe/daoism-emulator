@@ -1,19 +1,22 @@
 module ID = UID.UID
 module FeatureMap = Map.Make(ID)
+module Attribute = Attribute.Api
 
 exception NotEnough
 
-type elt = Attribute.t * int
+type 'a elt = 'a Attribute.t * int
 
-type 'a rule = elt array * 'a
+(* A rule sends 'a elt to 'a *)
+type 'a rule = ('a elt) array * ('a Feature.t * 'a)
 
 type 'a t = {
-  mutable features: elt FeatureMap.t;
-  mutable bounds: elt FeatureMap.t;
+  mutable features: ('a elt) FeatureMap.t;
+  mutable bounds: ('a elt) FeatureMap.t;
   mutable rules: ('a rule) list;
 }
 
-let update_entry key cb_exist cb_none features =
+let update_entry attr cb_exist cb_none features =
+  let key = ID.of_string @@ Attribute.to_string attr in
   let v = match FeatureMap.find_opt key features with
   | None -> cb_none ()
   | Some c -> cb_exist c
@@ -28,55 +31,50 @@ let fold f acc env = FeatureMap.fold f env.features acc
 
 let dump env =
   let c = FeatureMap.fold (fun _ (attr,i) acc ->
-    acc ^ " " ^ (Printf.sprintf "%s |-> %d" (attr#name) i)
+    acc ^ " " ^ (Printf.sprintf "%s |-> %d" (Attribute.to_string attr) i)
   ) env.features "" in
   List.fold_left (fun acc (attrs, _) ->
     let require = Array.fold_left (fun acc (attr,i) ->
-      Printf.sprintf "%s , %s : %d" acc attr#name i
+      Printf.sprintf "%s , %s : %d" acc (Attribute.to_string attr) i
     ) "" attrs in
     acc ^ ", <" ^ require ^ ">"
   ) c env.rules
 
 let to_json env =
   let fs = FeatureMap.fold (fun _ (attr,i) acc ->
-    acc @ [(attr#name, `Int i)]
+    acc @ [(Attribute.to_string attr, `Int i)]
   ) env.features [] in
   let rules = List.fold_left (fun acc (attrs, _) ->
     let require = Array.fold_left (fun acc (attr,i) ->
-      acc @ [(attr#name, `Int i)]
+      acc @ [(Attribute.to_string attr, `Int i)]
     ) [] attrs in
     acc @ [`Assoc require]
   ) [] env.rules in
   `Assoc [("Features", `Assoc fs); ("Rules", `List rules)]
 
 let set_bound (attr, amount) env =
-  env.bounds <- update_entry attr#id (fun _ -> Some (attr, amount))
+  env.bounds <- update_entry attr (fun _ -> Some (attr, amount))
     (fun _ -> Some (attr, amount)) env.bounds
 
 let proceed_feature feature env =
   match feature with
   | Feature.Consume (attr, amount) ->
-    env.features <- update_entry attr#id (fun (attr,a) ->
+    env.features <- update_entry attr (fun (attr,a) ->
       if a >= amount then Some (attr, a - amount) else Some (attr, 0)
     ) (fun _ -> None) env.features
   | Feature.Produce (attr, amount) ->
-    let bound = FeatureMap.find_opt attr#id env.bounds in
+    let bound = FeatureMap.find_opt (ID.of_string (Attribute.to_string attr)) env.bounds in
     let set v = match bound with
     | None -> v
     | Some (_, b) -> if v < b then v else b
     in
-    env.features <- update_entry attr#id (fun (attr,a) ->
+    env.features <- update_entry attr (fun (attr,a) ->
       Some (attr, set (a + amount))
     ) (fun _ -> Some (attr, set (amount))) env.features
   | Feature.Hold (attr, amount) ->
-    env.features <- update_entry attr#id (fun _ ->
+    env.features <- update_entry attr (fun _ ->
       Some (attr, amount)
     ) (fun _ -> Some (attr, amount)) env.features
-
-let filter_feature category env =
-  List.filter_map (fun (_, (attr,_)) ->
-    if attr#category == category then Some attr
-    else None) (List.of_seq (FeatureMap.to_seq env.features))
 
 let install_rule (rule:'a) env =
   env.rules <- rule :: env.rules
@@ -85,7 +83,7 @@ let apply_rules env =
   let features, fires = List.fold_left (fun (env, fs) (attrs_require, r) ->
     try
       let env = Array.fold_left (fun acc (attr,amount) ->
-        update_entry attr#id
+        update_entry attr
           (fun (attr, a) ->
             if a >= amount then Some (attr, a - amount) else raise NotEnough)
           (fun _ -> raise NotEnough)

@@ -1,7 +1,3 @@
-module AttributeWuXing = Core.Attribute.From(Attribute.WuXing)
-module AttributeBase = Core.Attribute.From(Attribute.Base)
-module AttributeSpawn = Core.Attribute.From(Attribute.Spawn)
-
 open Core
 open Common
 
@@ -29,7 +25,9 @@ let mk_creature tile =
     let name = Core.Name.gen_name "Creature" in
     new Api.elt name (make_state Quality.Normal) tile
 
-let creature_rule oref : (Feature.t * Object.t) Environ.rule =
-    let creature = new AttributeSpawn.ext_attr Creature in
-    [| new AttributeWuXing.ext_attr Shui, 5 |]
+let creature_rule oref : Object.t Environ.rule =
+    let creature = Attribute.Spawn
+      (AttributeSpawn.Apprentice mk_creature)
+    in
+    [| Attribute.WuXing AttributeWuXing.Shui, 5 |]
     , (Feature.mk_produce creature 1, oref)

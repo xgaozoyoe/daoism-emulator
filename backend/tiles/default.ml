@@ -1,6 +1,4 @@
-module AttributeWuXing = Core.Attribute.From(Attribute.WuXing)
 open Common
-open AttributeWuXing
 open Core
 
 type tile_feature =
@@ -11,11 +9,11 @@ type tile_feature =
   | Mud of int list
 
 let produce_of_feature = function
-  | Peak _ -> [Feature.mk_produce (new ext_attr Jing) 1]
+  | Peak _ -> [Feature.mk_produce (Attribute.WuXing AttributeWuXing.Jing) 1]
   | River _ -> []
-  | Cave _ -> [Feature.mk_produce (new ext_attr Huo) 1]
-  | Reef _ -> [Feature.mk_produce (new ext_attr Shui) 1]
-  | Mud _ -> [Feature.mk_produce (new ext_attr Tu) 1]
+  | Cave _ -> [Feature.mk_produce (Attribute.WuXing AttributeWuXing.Huo) 1]
+  | Reef _ -> [Feature.mk_produce (Attribute.WuXing AttributeWuXing.Shui) 1]
+  | Mud _ -> [Feature.mk_produce (Attribute.WuXing AttributeWuXing.Tu) 1]
 
 let feature_id = function
   | River ls -> List.fold_left (fun acc c -> Printf.sprintf "%s_%d" acc c) "river" ls
@@ -68,10 +66,10 @@ let make_default_state _ ttyp timeslice = fun state _ _ ->
   { state with deliver = Array.map (fun es -> (es, None)) (Array.of_list es) }, timeslice
 
 let set_default_bound _ _ bound tile =
-  let bounds = [| (new ext_attr Jing), bound
-    ; (new ext_attr Shui), bound
-    ; (new ext_attr Tu), bound
-    ; (new ext_attr Huo), bound
-    ; (new ext_attr Mu), bound
+  let bounds = [| (Attribute.WuXing AttributeWuXing.Jing), bound
+    ; (Attribute.WuXing AttributeWuXing.Shui), bound
+    ; (Attribute.WuXing AttributeWuXing.Tu), bound
+    ; (Attribute.WuXing AttributeWuXing.Huo), bound
+    ; (Attribute.WuXing AttributeWuXing.Mu), bound
     |] in
   Array.iter (fun b -> Environ.set_bound b tile#get_env) bounds
