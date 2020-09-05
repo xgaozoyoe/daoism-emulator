@@ -23,6 +23,6 @@ let to_string b = match b with
 
 let to_json b : Yojson.Basic.t =
   match b with
-  | Consume (attr, n) -> `Assoc [("Consume", `String (Attribute.to_string attr)); ("Amount", `Int n)]
-  | Produce (attr, n) -> `Assoc [("Produce", `String (Attribute.to_string attr)); ("Amount", `Int n)]
-  | Hold (attr, n) -> `Assoc [("Hold", `String (Attribute.to_string attr)); ("Amount", `Int n)]
+  | Consume (attr, n) -> `Assoc [("consume", `String (Attribute.to_string attr)); ("amount", `Int n)]
+  | Produce (attr, n) -> `Assoc [("produce", `String (Attribute.to_string attr)); ("amount", `Int n)]
+  | Hold (attr, n) -> `Assoc [("hold", `String (Attribute.to_string attr)); ("amount", `Int n)]

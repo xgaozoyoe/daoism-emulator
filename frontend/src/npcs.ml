@@ -1,6 +1,10 @@
 open Global
 module Npc = struct
 
+  type environ = {
+    features:int Js.Dict.t
+  }[@@bs.deriving abstract]
+
   type location = {
     x:int;
     y:int;
@@ -8,20 +12,23 @@ module Npc = struct
 
   type state = {
     description:string;
+    extra: string Js.Dict.t;
   }[@@bs.deriving abstract]
 
   type t = {
     name:string;
     state:state;
     loc:location;
+    env:environ;
   }[@@bs.deriving abstract]
 
   let display_info info =
-    [|
+    [
       "name", info |. nameGet;
       "state", info |. stateGet |. descriptionGet;
-    |]
-
+    ]
+    @ Array.to_list (Js.Dict.entries (info |. stateGet |. extraGet))
+    @ List.map (fun (e,i) -> (e, string_of_int i)) (Array.to_list (Js.Dict.entries(info |. envGet |. featuresGet)))
 
 end
 
@@ -58,14 +65,14 @@ let update_npc info uinfo =
   let open Npc in
   let name = info |. nameGet in
   let item = Document.get_by_id Document.document name in
-  Document.setInnerHTML item (build_npc_content info uinfo);
-  Document.add_event_listener item "click" (handle_click info)
+  Document.setInnerHTML item (build_npc_content info uinfo)
 
 let add_npc info uinfo container =
   let npc_svg = build_npc info uinfo in
-  let item = Document.createElement Document.document npc_svg in
-  Document.add_event_listener item "click" (handle_click info);
-  Document.appendChild container item
+  let item = Document.createElement Document.document "g" in
+  Document.appendChild container item;
+  Document.setOuterHTML item npc_svg;
+  Document.add_event_listener item "click" (handle_click info)
 
 let build_npcs npcs uinfo container =
   let open Npc in

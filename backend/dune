@@ -1,4 +1,4 @@
 (executable
- (name main)
- (libraries utils core npc tiles universe lwt conduit-lwt-unix lwt_ppx websocket-lwt-unix)
+ (name dao)
+ (libraries utils sdk core npc tiles buildings universe lwt conduit-lwt-unix lwt_ppx websocket-lwt-unix)
 )

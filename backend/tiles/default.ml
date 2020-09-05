@@ -6,21 +6,21 @@ type tile_feature =
   | Peak of int list
   | Cave of int list
   | Reef of int list
-  | Mud of int list
+  | Grass of int list
 
 let produce_of_feature = function
   | Peak _ -> [Feature.mk_produce (Attribute.WuXing AttributeWuXing.Jing) 1]
   | River _ -> []
   | Cave _ -> [Feature.mk_produce (Attribute.WuXing AttributeWuXing.Huo) 1]
   | Reef _ -> [Feature.mk_produce (Attribute.WuXing AttributeWuXing.Shui) 1]
-  | Mud _ -> [Feature.mk_produce (Attribute.WuXing AttributeWuXing.Tu) 1]
+  | Grass _ -> [Feature.mk_produce (Attribute.WuXing AttributeWuXing.Tu) 1]
 
 let feature_id = function
   | River ls -> List.fold_left (fun acc c -> Printf.sprintf "%s_%d" acc c) "river" ls
   | Peak ls -> List.fold_left (fun acc c -> Printf.sprintf "%s_%d" acc c) "peak" ls
   | Cave ls -> List.fold_left (fun acc c -> Printf.sprintf "%s_%d" acc c) "cave" ls
   | Reef ls -> List.fold_left (fun acc c -> Printf.sprintf "%s_%d" acc c) "reef" ls
-  | Mud ls -> List.fold_left (fun acc c -> Printf.sprintf "%s_%d" acc c) "mud" ls
+  | Grass ls -> List.fold_left (fun acc c -> Printf.sprintf "%s_%d" acc c) "grass" ls
 
 type base_type =
   | Plain

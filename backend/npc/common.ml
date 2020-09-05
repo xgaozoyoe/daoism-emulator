@@ -1,22 +1,23 @@
 module AttributeWuXing = Attribute.WuXing
 module AttributeBase = Attribute.Base
 module AttributeSpawn = Attribute.Spawn
+module AttributeDamage = Attribute.Damage
 module Attribute = Attribute.Api
 
 open Core
 open Attr
 open Quality
 
-type npc_state = {
+type 'a npc_state = {
   description: string;
   deliver: ((Object.t Feature.t) * Object.t option) array;
-  health: int;
+  state: 'a;
 }
 
-let npc_state_to_json ns =
+let state_to_json ns info_builder =
   `Assoc [
     ("description", `String ns.description)
-    ; ("health", `Int ns.health)
+    ; ("extra", info_builder ns.state)
     ; ("features", `List (List.map (fun pre -> Object.pre_event_to_json pre)
         (Array.to_list ns.deliver)))
    ]

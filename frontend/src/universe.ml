@@ -23,3 +23,6 @@ let build_tiles = Tiles.build_tiles
 let build_npcs = Npcs.build_npcs
 let add_npc = Npcs.add_npc
 let update_npc = Npcs.update_npc
+
+let cmd_fetch_data () =
+  Command.command_to_json Command.FetchData

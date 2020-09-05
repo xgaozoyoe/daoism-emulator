@@ -1,0 +1,4 @@
+(library
+  (name buildings)
+  (libraries core attribute tiles lwt conduit-lwt-unix ppx_deriving_yojson)
+)

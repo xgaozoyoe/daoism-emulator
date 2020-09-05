@@ -50,7 +50,7 @@ let to_json env =
     ) [] attrs in
     acc @ [`Assoc require]
   ) [] env.rules in
-  `Assoc [("Features", `Assoc fs); ("Rules", `List rules)]
+  `Assoc [("features", `Assoc fs); ("Rules", `List rules)]
 
 let set_bound (attr, amount) env =
   env.bounds <- update_entry attr (fun _ -> Some (attr, amount))

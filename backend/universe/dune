@@ -1,4 +1,4 @@
 (library
   (name universe)
-  (libraries attribute core npc tiles)
+  (libraries attribute core npc tiles buildings)
 )

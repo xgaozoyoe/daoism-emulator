@@ -109,6 +109,14 @@ module Make (R:Rectangle) = struct
     assert (t = top);
     tr_ray @ br_ray @ b_ray @ bl_ray @ tl_ray @ t_ray
 
+  let radius_siblings1 pos =
+    let direction = siblings pos in
+    Array.fold_left (fun acc (x,y) ->
+      if (x >=0 && y>=0 && x<R.width && y<R.height) then
+        acc @ [(x,y)]
+      else acc
+    ) [] direction
+
   let sibling_fold target func init nodes =
     let node = get_node target nodes in
     let direction = siblings target in

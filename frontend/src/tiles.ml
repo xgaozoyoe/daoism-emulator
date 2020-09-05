@@ -15,11 +15,11 @@ module Tile = struct
   } [@@bs.deriving abstract]
 
   let display_info info =
-    [|
+    [
       "name", info |. nameGet;
       "type", info |. ttypeGet |. baseGet;
       "hist", Printf.sprintf "%d" (info |. histGet)
-    |]
+    ]
 
 end
 
@@ -60,7 +60,8 @@ let build_feature center f =
   let feature_info = List.map (fun c ->int_of_string c) (List.tl feature_info) in
   match feature_name with
   | "river" -> (WaterPath.make_path_svg (to_float center) feature_info)
-  | _ -> Printf.sprintf "<g><use href='/dist/res/%s.svg#main' x='%d' y='%d' width='40' height='40'/></g>" feature_name x y
+  | _ -> Printf.sprintf "<g><use href='/dist/res/%s.svg#main' x='%d' y='%d' width='40' height='40'/></g>"
+    feature_name (x-20) (y-20)
 
 (* Make a single hexagon tile *)
 let build_tile name typ_no pos =

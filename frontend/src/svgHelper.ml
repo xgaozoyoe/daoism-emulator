@@ -30,7 +30,7 @@ let mk_arc_line (x1,y1) (x2,y2) (cx,cy) =
     x1 y1 cx cy x2 y2
 
 let mk_use svgname (cx, cy) =
-  Printf.sprintf "<use href='/dist/res/%s.svg#main' x='%d' y='%d' width='30' height='30'/>" svgname cx cy
+  Printf.sprintf "<use href='/dist/res/%s.svg#main' x='%d' y='%d' width='30' height='30'/>" svgname (cx-15) (cy-15)
 
 let mk_group name inner_html =
   Printf.sprintf "<g id='%s'>%s</g>" name inner_html

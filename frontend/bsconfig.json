@@ -7,6 +7,10 @@
     "subdirs" : false
   },
   {
+    "dir" : "../backend/sdk",
+    "subdirs" : false
+  },
+  {
     "dir" : "src",
     "subdirs" : true,
   }
@@ -15,10 +19,16 @@
     "module": "commonjs",
     "in-source": false
   },
+
   "suffix": ".bs.js",
 
   "bs-dependencies": [
-    "bs-webapi"
+    "bs-webapi",
+    "bs-deriving",
+  ],
+
+  "ppx-flags": [
+    "graphql_ppx/ppx"
   ],
 
   "warnings": {

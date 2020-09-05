@@ -1,7 +1,6 @@
 open Lwt.Syntax
 module Apprentice = Npc.Apprentice
 module Creature = Npc.Creature
-module Npc = Npc.Api
 module Tile = Tiles.Api
 open Utils
 open Core
@@ -17,8 +16,8 @@ type config = {
 
 let default_config _ = {
   tile_rule = ();
-  map_width = 32;
-  map_height = 16;
+  map_width = 64;
+  map_height = 32;
 }
 
 let init_map space map_config rule_config =
@@ -29,14 +28,14 @@ let init_map space map_config rule_config =
   let open Space in
 
   (* Initialize tile graph *)
-  Generator.init_graph 4;
+  Generator.init_graph 8;
 
   (* Initialize rivers *)
   Generator.build_rivers 2;
   Generator.build_features 2;
 
   let tiles_info = Generator.nodes in
-  Array.init (Array.length tiles_info) (fun i ->
+  let tiles = Array.init (Array.length tiles_info) (fun i ->
     let info = tiles_info.(i) in
     let tile_type = info.ttype in
     let quality = Quality.Normal in
@@ -46,13 +45,35 @@ let init_map space map_config rule_config =
     Array.iter (fun rule -> Environ.install_rule rule tile#get_env) rules;
     space.register_event (Timer.of_int 5) tile;
     tile
-  )
+  ) in
+  let module HexCoordinate = HexCoordinate.Make (struct
+    let width = map_config.map_width
+    let height = map_config.map_height
+  end) in
+  let buildings, _ = Array.fold_left (fun (acc,idx) node ->
+    let pos = HexCoordinate.from_index idx in
+    let siblings = HexCoordinate.radius_siblings1 pos in
+    let siblings = List.map (fun pos ->
+        HexCoordinate.get_node pos tiles_info
+      ) siblings in
+    let acc = match Buildings.Generator.generate_building node siblings with
+    | None -> acc
+    | Some building ->
+        assert (node.ttype.features = []);
+        acc @ [
+        (HexCoordinate.get_node pos tiles :> Object.t)
+        , Feature.mk_produce building 1
+      ]
+    in acc, idx + 1
+  ) ([],0) tiles_info in
+  tiles, buildings
 
 class elt n = object(self)
 
   inherit Object.elt n (-1,-1)
 
   val npcs:(ID.t, Object.t) Hashtbl.t = Hashtbl.create 10
+  val buildings:(ID.t, Object.t) Hashtbl.t = Hashtbl.create 10
   val mutable tiles = [||]
   val mutable events: Event.t list = []
   val mutable event_queue = Timer.TriggerQueue.empty
@@ -97,6 +118,12 @@ class elt n = object(self)
     let npcs = List.fold_left (fun acc (_, v) ->
       acc @ [v#to_json]
     ) [] seq in
+
+    let seq = List.of_seq @@ Hashtbl.to_seq buildings in
+    let buildings = List.fold_left (fun acc (_, v) ->
+      acc @ [v#to_json]
+    ) [] seq in
+
     `Assoc [
         ("world", `Assoc [
             ("width", `Int config.map_width);
@@ -105,7 +132,7 @@ class elt n = object(self)
       ; ("tiles", `List (Array.fold_left (fun acc c->
           acc @ [c#to_json]
         ) [] tiles))
-      ; ("npcs", `List npcs)
+      ; ("npcs", `List (npcs @ buildings))
     ]
 
   method step space = begin
@@ -152,6 +179,7 @@ class elt n = object(self)
               crk (Event.get_source e).(0)
           | Attribute.Spawn.God crk ->
               crk (Event.get_source e).(0)
+          | _ -> assert false
           in
           Hashtbl.add npcs (ID.of_string obj#get_name) (obj:>Object.t);
           let x,y = obj#get_loc in
@@ -168,12 +196,31 @@ class elt n = object(self)
     Lwt.return []
   end
 
-  method handle_event _ _ _ = Lwt.return []
+  method handle_event space src feature =
+    let src = src.(0) in
+    match feature with
+    | Feature.Produce (Attribute.Api.Spawn attr, _) -> begin
+        let building = match attr with
+        | Attribute.Spawn.Building crk -> crk src
+        | Attribute.Spawn.Apprentice crk -> crk src
+        | _ -> assert false
+        in
+        Hashtbl.add buildings (ID.of_string building#get_name) (building:>Object.t);
+        let x,y = building#get_loc in
+        let* _ = Lwt_io.printf "building at location (%d,%d)\n" x y in
+        space.register_event (Timer.of_int 1) (building:>Object.t);
+        Lwt.return []
+      end
+    | _ -> Lwt.return []
 
   method init (_:unit) =
     Printexc.record_backtrace true;
     let space = self#space in
-    tiles <- init_map space config (TileRule.tile_rule self)
+    let ts, buildings = init_map space config (TileRule.tile_rule self) in
+    tiles <- ts;
+    ignore @@ List.iter (fun (s, f) -> ignore @@ self#handle_event space [|s|] f) buildings;
+    let center = tiles.(Array.length tiles/2) in
+    ignore @@ self#handle_event space [|center|] (Feature.mk_produce (Npc.Generator.generate_player center) 1)
 
 end
 

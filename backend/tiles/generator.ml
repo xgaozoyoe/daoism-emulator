@@ -110,13 +110,14 @@ module TileInfoBuilder (R: Rectangle)= struct
   let build_hist ls_sand (left, top) =
     Array.fold_left (fun acc (pl, pt) ->
       let r = sqrt @@ float_of_int @@ (pl-left) * (pl-left) + (pt-top) * (pt-top) in
-      let hist = ceil @@ (exp (-0.01 *. r)) *. (20.0 +. Float.of_int (Random.int 30)) in
+      let hist = ceil @@ (exp (-0.01 *. r)) *. (Float.of_int (Random.int 60) +. 10.0) in
       acc + (Float.to_int hist)
     ) 0 ls_sand
 
 
   let init_tile hist =
     let open Default in
+    let hist = hist - 5 in
     if hist < 5 then init_tile Default.Water
     else if hist < 15 then init_tile Default.Grassland
     else if hist < 30 then init_tile Default.Forest
@@ -126,7 +127,7 @@ module TileInfoBuilder (R: Rectangle)= struct
     | Default.Water -> Some (Default.Reef [1])
     | Default.Forest -> Some (Default.Cave [1])
     | Default.Mountain -> Some (Default.Peak [1])
-    | Default.Grassland-> Some (Default.Mud [1])
+    | Default.Grassland-> Some (Default.Grass [1])
     | Default.Plain -> None
 
   let build_features _ = begin

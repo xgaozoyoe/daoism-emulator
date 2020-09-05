@@ -3,6 +3,7 @@ open Websocket
 open Websocket_lwt_unix
 
 exception ConnectionLost of string
+exception InvalidCommand of string
 
 module ResponseBuilder = struct
   let build_response category json = `Assoc [
@@ -59,6 +60,13 @@ module GlobalData = struct
     )
 end
 
+let cmd_handler cmd send =
+  let open Sdk.Command in
+  let cmd = command_of_yojson cmd in
+  match cmd with
+  | Ok (FetchData) -> GlobalData.send_data send
+  | Ok (Command _) -> GlobalData.send_data send
+  | _ -> raise (InvalidCommand "of json error!")
 
 let section = Lwt_log.Section.make "websocket"
 
@@ -91,7 +99,9 @@ let handler id client =
       | Opcode.Pong -> Lwt.return_unit
 
       | Opcode.Text
-      | Opcode.Binary -> GlobalData.send_data send
+      | Opcode.Binary ->
+        let cmd = Yojson.Safe.from_string fr.content in
+        cmd_handler cmd send
       | _ ->
         let* _ = send @@ Frame.close 1002 in
         raise @@ ConnectionLost "Unknown opcode"

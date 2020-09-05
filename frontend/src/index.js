@@ -8,6 +8,7 @@ var timer_status = 0;
 ws.onopen = function() {
     console.log('ws open');
     connected = true;
+    cmd = universe.cmd_fetch_data ();
     ws.send("get_data");
 };
 var connected = false;
@@ -26,7 +27,6 @@ ws.onmessage = function(event) {
           var npcs = json.data.updates;
           var world = json.data.world;
           for (const idx in json.data.updates) {
-            console.log(npcs[idx].name);
             var element = document.getElementById(npcs[idx].name, world);
             if (element) {
               universe.update_npc(npcs[idx], world);

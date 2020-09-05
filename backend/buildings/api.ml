@@ -5,11 +5,12 @@ module Attribute = Attribute.Api
 open Core
 open Common
 
-class virtual elt n init_state ds info_builder tile = object (self)
+class elt n init_state ds info_builder (tile:Object.t)
+  = object (self)
 
   inherit Object.elt n (tile#get_loc)
 
-  val mutable state_trans : ('a npc_state) Object.state_trans = ds
+  val mutable state_trans : ('a building_state) Object.state_trans = ds
 
   val mutable state = {
     description="诞生";
@@ -23,6 +24,11 @@ class virtual elt n init_state ds info_builder tile = object (self)
     ; ("loc", Space.to_json self#get_loc)
     ; ("env", Environ.to_json self#get_env)
   ]
+
+  method handle_event _ _ (* space src *) feature = begin
+    match feature with
+    | _ -> Lwt.return []
+  end
 
   (* step universe space *)
   method step space = begin
@@ -48,3 +54,13 @@ class virtual elt n init_state ds info_builder tile = object (self)
     Lwt.return events
   end
 end
+
+let registered_buildings : ((Object.t -> Object.t) list) ref= ref []
+let _ = Random.self_init ()
+
+let mk_building () =
+  assert (List.length !registered_buildings != 0);
+  let i = Random.int (List.length !registered_buildings) in
+  List.nth !registered_buildings i
+
+
