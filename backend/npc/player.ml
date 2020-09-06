@@ -19,6 +19,8 @@ class elt name tile = object (_)
 
   method handle_event _ _ _ = Lwt.return []
 
+  method handle_command _ = ()
+
 end
 
 let mk_player tile =

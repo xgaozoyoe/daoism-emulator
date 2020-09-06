@@ -61,6 +61,8 @@ class elt name tile = object (self)
         (Attribute.Damage AttributeDamage.Straight) 1, [|(self :> Object.t)|], src.(0)]
     | _ -> Lwt.return []
   end
+
+  method handle_command _ = ()
 end
 
 let mk_apprentice tile =

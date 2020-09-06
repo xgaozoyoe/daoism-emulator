@@ -1,7 +1,4 @@
 open Lwt.Syntax
-module AttributeDamage = Attribute.Damage
-module Attribute = Attribute.Api
-
 open Core
 open Common
 
@@ -22,6 +19,7 @@ class virtual elt n init_state ds info_builder tile = object (self)
     ; ("state", state_to_json state info_builder)
     ; ("loc", Space.to_json self#get_loc)
     ; ("env", Environ.to_json self#get_env)
+    ; ("command", self#get_command)
   ]
 
   (* step universe space *)

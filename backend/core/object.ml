@@ -7,8 +7,9 @@ type t = <
   get_loc: HexCoordinate.t;
   set_loc: HexCoordinate.t -> unit;
   get_env: t Environ.t;
-  get_command: (t Attribute.t) option;
-  set_command: (t Attribute.t) option -> unit;
+  get_command: (Yojson.Basic.t) ;
+  set_command: (Yojson.Basic.t) -> unit;
+  handle_command: (Yojson.Basic.t) -> unit;
   take_features: (t Feature.t) array -> unit;
   to_json: Yojson.Basic.t;
   step: t Space.t -> ((t Feature.t) * (t array) * t) list Lwt.t;
@@ -22,7 +23,7 @@ class virtual elt n (loc:HexCoordinate.t) = object
   val mutable loc = loc
   val mutable env: t Environ.t = Environ.empty []
   val mutable modifier: (t Modifier.t) list = []
-  val mutable command: (t Attribute.t) option = None
+  val mutable command: (Yojson.Basic.t) = `Assoc []
 
   method get_name = name
   method get_uid = uid
@@ -37,6 +38,7 @@ class virtual elt n (loc:HexCoordinate.t) = object
        Environ.proceed_feature f env
     ) features
 
+  method virtual handle_command: Yojson.Basic.t -> unit
   method virtual handle_event: t Space.t -> t array -> (t Feature.t) -> ((t Feature.t) * t array * t) list Lwt.t
   method virtual to_json: Yojson.Basic.t
   method virtual step: t Space.t -> ((t Feature.t) * t array * t) list Lwt.t

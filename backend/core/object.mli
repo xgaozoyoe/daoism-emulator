@@ -7,8 +7,9 @@ type t = <
   get_env: t Environ.t;
   get_loc: HexCoordinate.t;
   set_loc: HexCoordinate.t -> unit;
-  get_command: (t Attribute.t) option;
-  set_command: (t Attribute.t) option -> unit;
+  get_command: (Yojson.Basic.t) ;
+  set_command: (Yojson.Basic.t) -> unit;
+  handle_command: (Yojson.Basic.t) -> unit;
   take_features: (t Feature.t) array -> unit;
   to_json: Yojson.Basic.t;
   step: t Space.t -> (t Feature.t * t array * t) list Lwt.t;
@@ -27,8 +28,9 @@ class virtual elt: string -> HexCoordinate.t -> object
   method set_loc: HexCoordinate.t -> unit
   method take_features: (t Feature.t) array -> unit
   method get_env: t Environ.t
-  method get_command: (t Attribute.t) option
-  method set_command: (t Attribute.t) option -> unit
+  method get_command: (Yojson.Basic.t)
+  method set_command: (Yojson.Basic.t) -> unit
+  method virtual handle_command: Yojson.Basic.t -> unit
   method virtual to_json: Yojson.Basic.t
   method virtual step: t Space.t -> ((t Feature.t) * t array * t) list Lwt.t
   method virtual handle_event: t Space.t -> t array -> t Feature.t -> ((t Feature.t) * t array * t) list Lwt.t

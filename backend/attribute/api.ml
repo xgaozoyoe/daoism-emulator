@@ -14,8 +14,8 @@ let notice_to_string = function
 
 type 'a t =
   | Base of Base.t
-  | Damage of Damage.t
   | WuXing of WuXing.t
+  | Damage of Damage.t
   | Spawn of ('a Spawn.t)
   | Object of notice
 

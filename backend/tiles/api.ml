@@ -45,6 +45,8 @@ class elt n ttype cor ds = object (self)
     | _ -> Lwt.return []
   end
 
+  method handle_command _ = ()
+
   (* step universe space -> event list *)
   method step space = begin
 

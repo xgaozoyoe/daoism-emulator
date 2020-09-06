@@ -15,7 +15,7 @@ let rec step _ : unit Lwt.t = begin
 end in
 
 let main uri =
-  let handler = WebsocketApi.handler in
+  let handler = WebsocketApi.handler (fun json -> Lwt.return @@ world#handle_command json) in
   Resolver_lwt.resolve_uri ~uri Resolver_lwt_unix.system >>= fun endp ->
   let open Conduit_lwt_unix in
   endp_to_server ~ctx:default_ctx endp >>= fun server ->

@@ -213,6 +213,8 @@ class elt n = object(self)
       end
     | _ -> Lwt.return []
 
+  method handle_command _ = ()
+
   method init (_:unit) =
     Printexc.record_backtrace true;
     let space = self#space in

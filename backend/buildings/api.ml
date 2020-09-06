@@ -30,6 +30,8 @@ class elt n init_state ds info_builder (tile:Object.t)
     | _ -> Lwt.return []
   end
 
+  method handle_command _ = ()
+
   (* step universe space *)
   method step space = begin
     space.set_active (self:>Object.t);

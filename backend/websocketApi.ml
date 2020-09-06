@@ -60,17 +60,9 @@ module GlobalData = struct
     )
 end
 
-let cmd_handler cmd send =
-  let open Sdk.Command in
-  let cmd = command_of_yojson cmd in
-  match cmd with
-  | Ok (FetchData) -> GlobalData.send_data send
-  | Ok (Command _) -> GlobalData.send_data send
-  | _ -> raise (InvalidCommand "of json error!")
-
 let section = Lwt_log.Section.make "websocket"
 
-let handler id client =
+let handler cb id client =
   incr id;
   let id = !id in
   let send = Connected_client.send client in
@@ -99,9 +91,15 @@ let handler id client =
       | Opcode.Pong -> Lwt.return_unit
 
       | Opcode.Text
-      | Opcode.Binary ->
-        let cmd = Yojson.Safe.from_string fr.content in
-        cmd_handler cmd send
+      | Opcode.Binary -> begin
+          let open Sdk.Command in
+          let cmd = Yojson.Safe.from_string fr.content in
+          let cmd = command_of_yojson cmd in
+          match cmd with
+          | Ok (FetchData) -> GlobalData.send_data send
+          | Ok (Command str) -> cb (Yojson.Basic.from_string str)
+          | _ -> raise (InvalidCommand "of json error!")
+        end
       | _ ->
         let* _ = send @@ Frame.close 1002 in
         raise @@ ConnectionLost "Unknown opcode"
