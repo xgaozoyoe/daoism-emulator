@@ -11,11 +11,12 @@ let rec step _ : unit Lwt.t = begin
   let* update_info = Lwt.return @@ world#get_update in
   let* _ = UpdateDispatcher.broadcast update_info in
   let* _ = GlobalData.update_data world#to_json in
+  (* let* _ = Core.Timer.TriggerQueue.dump world#get_events (fun x -> x#get_name) in *)
   step ()
 end in
 
 let main uri =
-  let handler = WebsocketApi.handler (fun json -> Lwt.return @@ world#handle_command json) in
+  let handler = WebsocketApi.handler (fun id json -> Lwt.return @@ world#deliver_command world#space id json) in
   Resolver_lwt.resolve_uri ~uri Resolver_lwt_unix.system >>= fun endp ->
   let open Conduit_lwt_unix in
   endp_to_server ~ctx:default_ctx endp >>= fun server ->

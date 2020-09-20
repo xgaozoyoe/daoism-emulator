@@ -8,18 +8,11 @@ module Tile = struct
     features: string array;
   } [@@bs.deriving abstract]
 
-  type info = {
+  type tile_info = {
     name:string;
     ttype:tile_type;
     hist:int;
   } [@@bs.deriving abstract]
-
-  let display_info info =
-    [
-      "name", info |. nameGet;
-      "type", info |. ttypeGet |. baseGet;
-      "hist", Printf.sprintf "%d" (info |. histGet)
-    ]
 
 end
 
@@ -64,14 +57,42 @@ let build_feature center f =
     feature_name (x-20) (y-20)
 
 (* Make a single hexagon tile *)
-let build_tile name typ_no pos =
+let build_tile i pos =
+  let open Tile in
+  let name = i |. nameGet in
+  let typ_no = i |. ttypeGet |. baseGet in
   let style = Printf.sprintf "hex_%s" typ_no in
   SvgHelper.mk_hexagon name style pos
 
+let display_info info =
+  let open Tile in
+  (* let avatar = build_tile info in *)
+  let avatar = fun _ -> "" in
+  let i = Js.Dict.fromList [
+    "name", info |. nameGet;
+    "type", info |. ttypeGet |. baseGet;
+    "hist", Printf.sprintf "%d" (info |. histGet)
+  ] in
+  let attrs = Js.Dict.fromList [] in
+  let methods = Js.Dict.fromList [] in
+  Menu.mk_menu (avatar,10) i attrs methods
+
+
 let handle_click info () =
-  let menu = Document.get_by_id Document.document "menu" in
-  let innerHTML = Menu.build_menu (Tile.display_info info) in
-  Document.setInnerHTML menu innerHTML
+  (*let menu = Document.get_by_id Document.document "menu" in *)
+  let open Tile in
+  if (Action.feed_state (info |. nameGet)) then
+    Menu.reset_assist_menu ()
+  else begin
+    Action.reset_state ();
+    Menu.build_menu (display_info info) (fun _ -> Action.({
+    ids=[]; svg=""}))
+  end
+
+
+let get_tile_element idx =
+  let id = "tile_" ^ (string_of_int idx) in
+  Document.get_by_id Document.document id
 
 let build_tiles tiles uinfo container=
   let open Tile in
@@ -81,11 +102,9 @@ let build_tiles tiles uinfo container=
   end) in
   Js.log tiles;
   let svgs = Array.mapi (fun i info ->
-    let type_no = info |. ttypeGet |. baseGet in
-    let name = info |. nameGet in
     let cor = HexCoordinate.from_index i in
     let layout = HexCoordinate.layout cor in
-    let svg = build_tile name type_no layout in
+    let svg = build_tile info layout in
     let tile_feature = info |. ttypeGet |. featuresGet in
     Array.fold_left (fun svg f -> svg ^ (build_feature layout f)) svg tile_feature
   ) tiles in

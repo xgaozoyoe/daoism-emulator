@@ -2,9 +2,9 @@ open Lwt.Syntax
 open Core
 open Common
 
-class virtual elt n init_state ds info_builder tile = object (self)
+class virtual elt ?(cmd=`Assoc []) n init_state ds info_builder tile = object (self)
 
-  inherit Object.elt n (tile#get_loc)
+  inherit Object.elt ~cmd:cmd n (tile#get_loc)
 
   val mutable state_trans : ('a npc_state) Object.state_trans = ds
 
@@ -19,7 +19,7 @@ class virtual elt n init_state ds info_builder tile = object (self)
     ; ("state", state_to_json state info_builder)
     ; ("loc", Space.to_json self#get_loc)
     ; ("env", Environ.to_json self#get_env)
-    ; ("command", self#get_command)
+    ; ("command", Yojson.Safe.to_basic (self#get_command))
   ]
 
   (* step universe space *)

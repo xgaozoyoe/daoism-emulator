@@ -23,6 +23,7 @@ class elt n init_state ds info_builder (tile:Object.t)
     ; ("state", state_to_json state info_builder)
     ; ("loc", Space.to_json self#get_loc)
     ; ("env", Environ.to_json self#get_env)
+    ; ("command", Yojson.Safe.to_basic (self#get_command))
   ]
 
   method handle_event _ _ (* space src *) feature = begin
@@ -30,7 +31,7 @@ class elt n init_state ds info_builder (tile:Object.t)
     | _ -> Lwt.return []
   end
 
-  method handle_command _ = ()
+  method handle_command _ _ = ()
 
   (* step universe space *)
   method step space = begin

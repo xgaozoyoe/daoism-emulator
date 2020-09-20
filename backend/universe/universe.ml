@@ -80,6 +80,8 @@ class elt n = object(self)
   val mutable update = ObjectSet.empty
   val config = default_config ()
 
+  method get_events = event_queue
+
   method space: Object.t Space.t =
     let open Space in
     let module Coordinate = HexCoordinate.Make (struct
@@ -89,9 +91,12 @@ class elt n = object(self)
     {
       get_path = (fun _ _ -> [||]);
       the_universe = (fun _ -> (self :> Object.t));
-      cancel_event = (fun _ -> ());
+      cancel_event = (fun o ->
+        event_queue <- Timer.TriggerQueue.cancel_event o event_queue
+      );
       register_event = (fun t o ->
-        event_queue <- Timer.TriggerQueue.register_event t o event_queue);
+        event_queue <- Timer.TriggerQueue.register_event t o event_queue
+      );
       get_view = (fun cor ->
         Coordinate.sibling_fold cor (fun acc _ sibling _ ->
           sibling :: acc
@@ -135,6 +140,30 @@ class elt n = object(self)
       ; ("npcs", `List (npcs @ buildings))
     ]
 
+  method handle_event space src feature =
+    match feature with
+    | Feature.Produce (Attribute.Api.Spawn attr, _)
+      when Population.try_spawn () -> begin
+        Population.increase_population ();
+        let obj = match attr with
+        | Attribute.Spawn.Apprentice crk -> crk src.(0)
+        | Attribute.Spawn.Creature crk -> crk src.(0)
+        | Attribute.Spawn.Mob crk -> crk src.(0)
+        | Attribute.Spawn.God crk -> crk src.(0)
+        | Attribute.Spawn.Building crk -> crk src.(0)
+        in
+        Hashtbl.add npcs (ID.of_string obj#get_name) (obj:>Object.t);
+        let x,y = obj#get_loc in
+        let* _ = Lwt_io.printf "%s spawn at location (%d,%d)\n" obj#get_name x y in
+        space.register_event (Timer.of_int 1) (obj:>Object.t);
+        Lwt.return []
+      end
+    | Feature.Hold (Attribute.Api.Object Attribute.Api.Dead, _) ->
+      let npc = src.(0) in
+      Hashtbl.remove npcs (ID.of_string npc#get_name);
+      Lwt.return []
+    | _ -> Lwt.return []
+
   method step space = begin
     update <- ObjectSet.empty;
     let* _ = Lwt_io.printf ("step...\n") in
@@ -146,7 +175,7 @@ class elt n = object(self)
       Lwt.return @@ acc @ (List.map (fun (f,s,t) -> Event.mk_event f s t) evts)
     ) [] events in
 
-    let seq, queue = Timer.TriggerQueue.fetch_events [] event_queue in
+    let seq, queue = Timer.TriggerQueue.fetch_events [] event_queue true in
     event_queue <- queue;
     let* _ = Lwt_io.printf ("trigger %d objs\n") (List.length seq) in
 
@@ -166,54 +195,28 @@ class elt n = object(self)
     (* Handle events that are generated for universe *)
     let* _ = Lwt_list.iter_s (fun e ->
       let feature = Event.get_feature e in
-      match feature with
-      | Feature.Produce (Attribute.Api.Spawn attr, _)
-        when Population.try_spawn () -> begin
-          Population.increase_population ();
-          let obj = match attr with
-          | Attribute.Spawn.Apprentice crk ->
-              crk (Event.get_source e).(0)
-          | Attribute.Spawn.Creature crk ->
-              crk (Event.get_source e).(0)
-          | Attribute.Spawn.Mob crk ->
-              crk (Event.get_source e).(0)
-          | Attribute.Spawn.God crk ->
-              crk (Event.get_source e).(0)
-          | _ -> assert false
-          in
-          Hashtbl.add npcs (ID.of_string obj#get_name) (obj:>Object.t);
-          let x,y = obj#get_loc in
-          let* _ = Lwt_io.printf "spawn at location (%d,%d)\n" x y in
-          Lwt.return @@ space.register_event (Timer.of_int 1) (obj:>Object.t)
-        end
-      | Feature.Hold (Attribute.Api.Object Attribute.Api.Dead, _) ->
-        let npc = (Event.get_source e).(0) in
-        Lwt.return @@ Hashtbl.remove npcs (ID.of_string npc#get_name)
-      | _ -> Lwt.return ()
+      let src = Event.get_source e in
+      let* _ = self#handle_event space src feature in
+      Lwt.return_unit
     ) my_events in
 
-    events <- left_evts @ deliver_events;
+    (* Second chance events *)
+    let* left_evts = Lwt_list.fold_left_s (fun acc e ->
+      let target = Event.get_target e in
+      let* evts = target#handle_event (self#space) (Event.get_source e) (Event.get_feature e) in
+      (* FIXME: might trigger extra events *)
+      Lwt.return @@ acc @ (List.map (fun (f,s,t) -> Event.mk_event f s t) evts)
+    ) [] (left_evts @ deliver_events) in
+
+    events <- left_evts;
     Lwt.return []
   end
 
-  method handle_event space src feature =
-    let src = src.(0) in
-    match feature with
-    | Feature.Produce (Attribute.Api.Spawn attr, _) -> begin
-        let building = match attr with
-        | Attribute.Spawn.Building crk -> crk src
-        | Attribute.Spawn.Apprentice crk -> crk src
-        | _ -> assert false
-        in
-        Hashtbl.add buildings (ID.of_string building#get_name) (building:>Object.t);
-        let x,y = building#get_loc in
-        let* _ = Lwt_io.printf "building at location (%d,%d)\n" x y in
-        space.register_event (Timer.of_int 1) (building:>Object.t);
-        Lwt.return []
-      end
-    | _ -> Lwt.return []
+  method handle_command _ _ = ()
 
-  method handle_command _ = ()
+  method deliver_command space target_id cmd =
+    let c = Hashtbl.find npcs (ID.of_string target_id) in
+    c#handle_command space cmd
 
   method init (_:unit) =
     Printexc.record_backtrace true;

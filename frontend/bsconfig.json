@@ -24,11 +24,6 @@
 
   "bs-dependencies": [
     "bs-webapi",
-    "bs-deriving",
-  ],
-
-  "ppx-flags": [
-    "graphql_ppx/ppx"
   ],
 
   "warnings": {

@@ -3,7 +3,6 @@ open Websocket
 open Websocket_lwt_unix
 
 exception ConnectionLost of string
-exception InvalidCommand of string
 
 module ResponseBuilder = struct
   let build_response category json = `Assoc [
@@ -97,8 +96,14 @@ let handler cb id client =
           let cmd = command_of_yojson cmd in
           match cmd with
           | Ok (FetchData) -> GlobalData.send_data send
-          | Ok (Command str) -> cb (Yojson.Basic.from_string str)
-          | _ -> raise (InvalidCommand "of json error!")
+          | Ok (Command (id, sub)) -> begin
+              let* _ = Lwt_log.info_f ~section "Handle Command ..." in
+              cb id (Sdk.Command.subcommand_to_yojson sub)
+            end
+          | _ -> begin
+              let* _ = Lwt_log.info_f ~section "Correct Format but wrong command" in
+              raise (Sdk.Command.InvalidCommand fr.content)
+            end
         end
       | _ ->
         let* _ = send @@ Frame.close 1002 in
@@ -109,9 +114,12 @@ let handler cb id client =
     recv_forever y
   in
   Lwt.catch
-    recv_forever
-    (fun exn -> begin
-       let* _ = Lwt_log.info_f ~section "Connection to client %d lost" id in
-       let* _ = UpdateDispatcher.remove_sender id in
-       raise exn
+    recv_forever (fun exn -> begin
+      let* _ = Lwt_log.info_f ~section "Connection to client %d lost" id in
+      let* _ = UpdateDispatcher.remove_sender id in
+      let* _ = match exn with
+      | Sdk.Command.InvalidCommand str -> Lwt_log.info_f ~section "InvalidCommand %s" str
+      | _ -> Lwt_log.info_f ~section "%s" (Printexc.to_string exn)
+      in
+      raise exn
     end)

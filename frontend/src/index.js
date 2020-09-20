@@ -1,15 +1,15 @@
 import React, { Component } from 'react';
 var WS = require('websocket').w3cwebsocket
 WS === window.WebSocket
-var universe = require ("../lib/js/src/universe.bs.js");
-
 var ws = new WS('ws://127.0.0.1:9001', '', 'http://example.com');
 var timer_status = 0;
+window.ws = ws;
+var universe = require ("../lib/js/src/universe.bs.js");
+
 ws.onopen = function() {
     console.log('ws open');
     connected = true;
-    cmd = universe.cmd_fetch_data ();
-    ws.send("get_data");
+    universe.fetch_data ();
 };
 var connected = false;
 var tiles = null;
@@ -27,12 +27,7 @@ ws.onmessage = function(event) {
           var npcs = json.data.updates;
           var world = json.data.world;
           for (const idx in json.data.updates) {
-            var element = document.getElementById(npcs[idx].name, world);
-            if (element) {
-              universe.update_npc(npcs[idx], world);
-            } else {
-              universe.add_npc(npcs[idx], world, npcs_container);
-            }
+            universe.update_npc(npcs[idx], world, npcs_container);
           }
         } else {
           console.log(json);
@@ -47,17 +42,10 @@ var focus = function(id) {
   alert (id);
 }
 
-window.fetch_status_data = function() {
-  if (ws.readyState == WS.OPEN) {
-    ws.send("get_data");
-  };
-}
-
 var isDown = false; // whether mouse is pressed
 var startCoords = []; // 'grab' coordinates when pressing mouse
 var trans = [0, 0]; // previous coordinates of mouse release
 
-//timer_status = setInterval("window.fetch_status_data()",100);
 document.getElementById("svg-container").onmousedown = function (e) {
   isDown = true;
   startCoords = [

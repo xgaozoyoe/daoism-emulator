@@ -62,7 +62,8 @@ class elt name tile = object (self)
     | _ -> Lwt.return []
   end
 
-  method handle_command _ = ()
+  method handle_command _ _ = ()
+
 end
 
 let mk_apprentice tile =

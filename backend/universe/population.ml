@@ -1,6 +1,6 @@
 let population = ref 0
 
-let max_population = 20
+let max_population = 60
 
 let _ = Random.self_init ()
 

@@ -30,8 +30,7 @@ module TriggerQueue = struct
   let mk_event e l next = Entity {value = e; wait = l; next = next}
 
   let register_event w e head =
-    let rec register w tail =
-    match tail with
+    let rec register w tail = match tail with
     | Tail -> mk_event e w Tail
     | Entity evt ->
       begin
@@ -47,10 +46,27 @@ module TriggerQueue = struct
     in
     register w head
 
-  let rec fetch_events es head = match head with
+  let cancel_event e head =
+    let rec remove e tail = match tail with
+    | Tail -> Tail
+    | Entity evt -> begin
+        if (evt.value == e) then evt.next
+        else begin
+          evt.next <- remove e evt.next;
+          Entity evt
+        end
+      end
+    in
+    remove e head
+
+  let rec fetch_events es head dec = match head with
     | Entity e when e.wait = 0 ->
-        fetch_events (e.value :: es) e.next
-    | Entity e -> es, Entity {value = e.value; wait = e.wait -1; next = e.next}
+        fetch_events (e.value :: es) e.next dec
+    | Entity e -> es, Entity {
+        value = e.value;
+        wait = if dec then e.wait - 1 else e.wait;
+        next = e.next
+      }
     | Tail -> es, Tail
 
   let rec dump head to_str = match head with

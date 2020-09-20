@@ -6,7 +6,14 @@ external add_event_listener: element -> string -> 'a -> unit = "addEventListener
 external innerHTML : element -> string = "" [@@bs.get]
 external setInnerHTML : element -> string -> unit = "innerHTML" [@@bs.set]
 external setOuterHTML : element -> string -> unit = "outerHTML" [@@bs.set]
+external setAttribute : element -> string -> string -> unit = "" [@@bs.send]
+
 
 external appendChild: element -> element -> unit = "appendChild" [@@bs.send]
 external createElement : dom -> string -> element
     = "createElement" [@@bs.send]
+external createElementNS : dom -> string -> string -> element
+    = "createElementNS" [@@bs.send]
+
+let svg_ns = "http://www.w3.org/2000/svg"
+let createElementSVG dom string = createElementNS dom svg_ns string
