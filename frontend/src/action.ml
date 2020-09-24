@@ -1,5 +1,7 @@
+type loc = int * int
+type command = (string -> loc -> string)
 type hint = {
-  ids: (string * string) list;
+  ids: (string * loc * command) list;
   svg: string;
 }
 type state =
@@ -23,18 +25,18 @@ let send_command cmd =
   Js.log command;
   Connection.send_command Connection.ws command
 
-let feed_state id = match !state with
+let feed_state id cor = match !state with
   | Idle -> Js.log "idle"; false
   | CollectCoordinate cands -> begin
-      let r = (List.find_opt (fun (x,_) -> x = id) cands.ids) in
+      let r = (List.find_opt (fun (x,_,_) -> x = id) cands.ids) in
       match r with
-      | Some (_, cmd) -> send_command cmd; true
+      | Some (_, _, cmd) -> send_command (cmd id cor); true
       | _ -> false
     end
   | CollectTarget cands -> begin
-      let r = (List.find_opt (fun (x,_) -> x = id) cands.ids) in
+      let r = (List.find_opt (fun (_,c,_) -> c = cor) cands.ids) in
       match r with
-      | Some (_, cmd) -> send_command cmd; true
+      | Some (_, _, cmd) -> send_command (cmd id cor); true
       | _ -> false
     end
 
@@ -50,5 +52,5 @@ let push_state state_string cands =
 let mk_command_info state_string src cand (x,y) =
   match state_string with
   | "coordinate" -> Printf.sprintf "[\"%s\", [\"Move\", [%d, %d]]]" src x y
-  | "target" -> Printf.sprintf "[\"Attack\", %s]" cand
+  | "target" -> Printf.sprintf "[\"%s\", [\"Attack\", \"%s\"]]" src cand
   | _ -> "[]"

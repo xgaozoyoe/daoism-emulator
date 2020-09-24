@@ -16,8 +16,8 @@ type config = {
 
 let default_config _ = {
   tile_rule = ();
-  map_width = 64;
-  map_height = 32;
+  map_width = 12;
+  map_height = 8;
 }
 
 let init_map space map_config rule_config =
@@ -189,8 +189,8 @@ class elt n = object(self)
       List.partition (fun e -> (Event.get_target e)#get_name = self#get_name)
       evts
     in
-    let* _ = Lwt_list.iter_s (fun e -> Logger.log "[ my event: %s ]\n" (Event.to_string e)) my_events in
-    let* _ = Lwt_list.iter_s (fun e -> Logger.log "[ deliver event: %s ]\n" (Event.to_string e)) deliver_events in
+    let* _ = Lwt_list.iter_s (fun e -> Logger.event_log "[ my event: %s ]\n" (Event.to_string e)) my_events in
+    let* _ = Lwt_list.iter_s (fun e -> Logger.event_log "[ deliver event: %s ]\n" (Event.to_string e)) deliver_events in
 
     (* Handle events that are generated for universe *)
     let* _ = Lwt_list.iter_s (fun e ->

@@ -40,7 +40,7 @@ end
  * State transformation function
  * old_state -> universe -> space -> self -> new_state
  *)
-type 'a state_trans = 'a -> t Space.t -> t -> 'a * Timer.slice
+type 'a state_trans = 'a -> t Space.t -> t -> 'a * (Timer.slice option)
 
 type obj_map = {
   get_obj: UID.t -> t

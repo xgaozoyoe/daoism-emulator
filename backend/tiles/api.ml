@@ -3,7 +3,6 @@ open Space
 open Lwt.Syntax
 open Common
 
-module NpcAttr = Npc.Attr
 module Npc = Npc.Api
 
 (*exception SiblingException*)
@@ -30,7 +29,7 @@ class elt n ttype cor ds = object (self)
 
   method handle_event _ src feature = begin
     let src = src.(0) in
-    let* _ = Logger.log "[ %s handles event %s from %s]\n" (self#get_name) (Feature.to_string feature) (src#get_name) in
+    let* _ = Logger.event_log "[ %s handles event %s from %s]\n" (self#get_name) (Feature.to_string feature) (src#get_name) in
     match feature with
     | Hold (Object attr, _) -> begin
         let _ = match attr with
@@ -65,16 +64,23 @@ class elt n ttype cor ds = object (self)
       ) (Environ.apply_rules self#get_env) in
 
     (*
-    let* _ = Logger.log "[ %s <%s> local_env: %s ]\n" (self#get_name) state.name (Environ.dump self#get_env) in
-    let* _ = Logger.log "[ %s <%s> holds:%s ]\n" (self#get_name) state.name
+    let* _ = Logger.event_log "[ %s <%s> local_env: %s ]\n" (self#get_name) state.name (Environ.dump self#get_env) in
+    let* _ = Logger.event_log "[ %s <%s> holds:%s ]\n" (self#get_name) state.name
          (List.fold_left (fun acc c -> acc ^ " " ^ c#get_name) "" holds) in
     *)
 
     (* Register step action after 5 timeslice *)
     let* s, ts = Lwt.return @@ state_trans state space (self:>Object.t) in
     state <- s;
-    space.register_event ts (self:>Object.t);
-    Lwt.return (spawn_events @ step_events)
+    let* _ = match ts with
+    | Some t -> begin
+        let* _ = Logger.event_log "register event %s\n" (Timer.to_string t) in
+        let* _ = Lwt.return @@ space.register_event t (self:>Object.t) in
+        let* _ = Logger.event_log "[ local_env: %s ]\n" (Environ.dump self#get_env) in
+        Lwt.return ()
+      end
+    | None -> Lwt.return ()
+    in Lwt.return (spawn_events @ step_events)
   end
 end
 

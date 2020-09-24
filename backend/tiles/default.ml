@@ -63,7 +63,8 @@ let tile_type_array = [|Mountain; Water; Grassland; Forest |]
 
 let make_default_state _ ttyp timeslice = fun state _ _ ->
   let es = List.fold_left (fun acc f -> (produce_of_feature f) @ acc) [] ttyp.features in
-  { state with deliver = Array.map (fun es -> (es, None)) (Array.of_list es) }, timeslice
+  let t = match es with | [] -> None | _ -> Some timeslice in
+  { state with deliver = Array.map (fun es -> (es, None)) (Array.of_list es) }, t
 
 let set_default_bound _ _ bound tile =
   let bounds = [| (Attribute.WuXing AttributeWuXing.Jing), bound

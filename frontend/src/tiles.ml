@@ -3,6 +3,11 @@ open Global
 
 module Tile = struct
 
+  type location = {
+    x:int;
+    y:int;
+  }[@@bs.deriving abstract]
+
   type tile_type = {
     base:string;
     features: string array;
@@ -11,7 +16,7 @@ module Tile = struct
   type tile_info = {
     name:string;
     ttype:tile_type;
-    hist:int;
+    loc:location;
   } [@@bs.deriving abstract]
 
 end
@@ -71,7 +76,6 @@ let display_info info =
   let i = Js.Dict.fromList [
     "name", info |. nameGet;
     "type", info |. ttypeGet |. baseGet;
-    "hist", Printf.sprintf "%d" (info |. histGet)
   ] in
   let attrs = Js.Dict.fromList [] in
   let methods = Js.Dict.fromList [] in
@@ -81,7 +85,8 @@ let display_info info =
 let handle_click info () =
   (*let menu = Document.get_by_id Document.document "menu" in *)
   let open Tile in
-  if (Action.feed_state (info |. nameGet)) then
+  let cor = (info |. locGet |. xGet), (info |. locGet |. yGet) in
+  if (Action.feed_state (info |. nameGet) cor ) then
     Menu.reset_assist_menu ()
   else begin
     Action.reset_state ();

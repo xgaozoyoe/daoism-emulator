@@ -1,6 +1,7 @@
 open Lwt.Syntax
 open Core
-open Common
+open Common.Api
+
 let _ = Random.self_init ()
 
 type apprentice_state = {
@@ -25,11 +26,11 @@ let make_state quality = fun state space self ->
         else
           source
         in
-        move_state state source target
+        CommonState.move_state state source target
       end
-    | 1 -> practise_state quality state
-    | 0 -> explore_state state (space.the_universe ())
-    | _ -> practise_state quality state
+    | 1 -> CommonState.practise_state quality state
+    | 0 -> CommonState.explore_state state (space.the_universe ())
+    | _ -> CommonState.practise_state quality state
 
 class elt name tile = object (self)
 
@@ -49,16 +50,16 @@ class elt name tile = object (self)
       state <- {state with state = inner_state};
       if health <= 0 then begin
         let loc_tile = Option.get @@ space.get_tile (self#get_loc) in
-        let s, _ = Common.dead_state state loc_tile (space.the_universe ()) in
+        let s, _ = CommonState.dead_state state loc_tile (space.the_universe ()) in
         state <- s;
         (* space register self t *)
         Lwt.return []
       end else
         Lwt.return []
-    | Hold (Attribute.Object Meet, _)  ->
+    | Hold (Attribute.Api.Object Meet, _)  ->
       Lwt.return [Feature.mk_produce
         (* FIXME: src might be empty ? *)
-        (Attribute.Damage AttributeDamage.Straight) 1, [|(self :> Object.t)|], src.(0)]
+        (Attribute.Api.Damage Attribute.Damage.Straight) 1, [|(self :> Object.t)|], src.(0)]
     | _ -> Lwt.return []
   end
 
@@ -71,8 +72,8 @@ let mk_apprentice tile =
   new elt name tile
 
 let apprentice_rule oref : Object.t Environ.rule =
-    let apprentice = Attribute.Spawn
-      (AttributeSpawn.Apprentice mk_apprentice)
+    let apprentice = Attribute.Api.Spawn
+      (Attribute.Spawn.Apprentice mk_apprentice)
     in
-    [| Attribute.WuXing AttributeWuXing.Jing, 3 |]
+    [| Attribute.Api.WuXing Attribute.WuXing.Jing, 3 |]
     , (Feature.mk_produce apprentice 1, oref)

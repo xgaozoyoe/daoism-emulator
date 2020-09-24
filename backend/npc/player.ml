@@ -1,5 +1,4 @@
 open Core
-open Common
 let _ = Random.self_init ()
 
 type player_state = {
@@ -11,11 +10,11 @@ let mk_state_info st =
       ("health", `String (Printf.sprintf "%d" st.health))
     ]
 
-let make_state _ = fun state _ _ -> idle_state state
+let make_state _ = fun state _ _ -> Common.Api.CommonState.idle_state state
 
 let cmd = `Assoc [
     ("move",`String "coordinate");
-    ("attack",`String "coordinate");
+    ("attack",`String "target");
     ("train",`String "train");
     ("construct",`String "construct");
     ("think",`String "think");
@@ -34,7 +33,7 @@ class elt name tile = object (self)
     | Ok (Move cor) -> begin
         let src_tile = Option.get @@ space.get_tile (self#get_loc) in
         let target_tile = Option.get @@ space.get_tile cor in
-        let mstate, _ = move_state state src_tile target_tile in
+        let mstate, _ = Common.Api.CommonState.move_state state src_tile target_tile in
         state <- mstate;
         space.cancel_event (self:>Object.t);
         space.register_event (Timer.of_int 1) (self:>Object.t)

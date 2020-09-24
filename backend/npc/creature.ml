@@ -1,5 +1,4 @@
 open Core
-open Common
 
 let _ = Random.self_init ()
 
@@ -12,12 +11,11 @@ let mk_state_info st =
       ("health", `String (Printf.sprintf "%d" st.health))
     ]
 
-let make_state _ = fun state _ _ -> state, Timer.of_int 20
-
+let make_state _ = fun state _ _ -> state, Some (Core.Timer.of_int 20)
 
 class elt name tile = object (_)
 
-  inherit Api.elt name {health=10} (make_state Quality.Normal)
+  inherit Api.elt name {health=10} (make_state Core.Quality.Normal)
     mk_state_info tile
 
   method handle_event _ _ _ = Lwt.return []
@@ -31,8 +29,8 @@ let mk_creature tile =
     new elt name tile
 
 let creature_rule oref : Object.t Environ.rule =
-    let creature = Attribute.Spawn
-      (AttributeSpawn.Apprentice mk_creature)
+    let creature = Attribute.Api.Spawn
+      (Attribute.Spawn.Apprentice mk_creature)
     in
-    [| Attribute.WuXing AttributeWuXing.Huo, 5 |]
+    [| Attribute.Api.WuXing Attribute.WuXing.Huo, 5 |]
     , (Feature.mk_produce creature 1, oref)

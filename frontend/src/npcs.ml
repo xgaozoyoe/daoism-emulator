@@ -61,19 +61,20 @@ let candidate_builder uinfo info command_string =
   let ids, svg = Array.fold_left (fun (ids, svg) cor ->
     let id = Printf.sprintf "tile_%d" (HexCoordinate.get_index cor) in
     let layout = HexCoordinate.layout cor in
-    let command = Action.mk_command_info command_string name id cor in
+    let command = Action.mk_command_info command_string name in
     let svg = svg ^ (SvgHelper.mk_rectangle command_string (5,5) layout) in
-    (id,command) :: ids, svg
+    (id,cor,command) :: ids, svg
   ) ([], "") cands in
   Action.({ids=ids; svg=svg})
 
 let handle_click name uinfo () =
+  let open Npc in
   let info = Js.Dict.get npc_map name in
   match info with
   | None -> assert false
   | Some info -> begin
-      let open Npc in
-      if (Action.feed_state (info |. nameGet)) then
+      let cor = (info |. locGet |. xGet), (info |. locGet |. yGet) in
+      if (Action.feed_state (info |. nameGet) cor) then
         Menu.reset_assist_menu ()
       else begin
         Action.reset_state ();

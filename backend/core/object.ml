@@ -44,7 +44,7 @@ class virtual elt ?(cmd=`Assoc []) n (loc:HexCoordinate.t) = object
   method virtual step: t Space.t -> ((t Feature.t) * t array * t) list Lwt.t
 end
 
-type 'a state_trans = 'a -> t Space.t -> t -> 'a * Timer.slice
+type 'a state_trans = 'a -> t Space.t -> t -> 'a * (Timer.slice option)
 
 type obj_map = {
   get_obj: UID.t -> t
