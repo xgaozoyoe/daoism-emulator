@@ -25,6 +25,10 @@ let send_command cmd =
   Js.log command;
   Connection.send_command Connection.ws command
 
+let state_wait_for_coordinate () = match !state with
+  | CollectCoordinate _ -> true
+  | _ -> false
+
 let feed_state id cor = match !state with
   | Idle -> Js.log "idle"; false
   | CollectCoordinate cands -> begin

@@ -30,9 +30,15 @@ module CommonState = struct
   let idle_state state =
     { state with deliver = [||]; description = "空闲"}, None
 
+  let fight_state state target =
+    { state with deliver = [|
+        Feature.mk_produce (Damage Straight) 1, Some target
+      |]; description = "战斗"}
+    , Some (Timer.of_int 4)
+
   let practise_state quality state =
     let es = Array.map (fun x-> x, None)
-      (Level.BasicSystem.make_basic_features (quality_to_total quality))
+      (Level.WuXingSystem.make_features (quality_to_total quality))
     in
     { state with deliver = es; description = "修炼" }, Some (Timer.of_int 9)
 

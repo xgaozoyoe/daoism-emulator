@@ -16,7 +16,7 @@ let spread_attribute total (features:Object.t Attribute.t array) =
 module BasicSystem = struct
   open AttributeBase
   let base_core = [|Attribute.Base Wu; Attribute.Base Ji; Attribute.Base Qi|]
-  let make_basic_features total = spread_attribute total base_core
+  let make_features total = spread_attribute total base_core
 end
 
 module WuXingSystem = struct
@@ -29,5 +29,5 @@ module WuXingSystem = struct
         WuXing Huo;
         WuXing Tu;
     |]
-  let make_wuxing_features total = spread_attribute total wuxing_core
+  let make_features total = spread_attribute total wuxing_core
 end

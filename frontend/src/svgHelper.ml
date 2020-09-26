@@ -11,7 +11,24 @@ let mk_rectangle style (w,h) (cx, cy) =
   in
   Printf.sprintf "<polygon class='%s' points='%s'></polygon>" style points
 
-let mk_hexagon name r (cx, cy) =
+let mk_hexagon_boundary r c (cx, cy) =
+  let cx = Js.Int.toFloat cx in
+  let cy = Js.Int.toFloat cy in
+  let l = Js.Int.toFloat r in
+  let d = l /. 2. in
+  let h = l /. 30. *. 26. in
+  let points = ((cx -. l, cy), (cx -. d, cy -. h), (cx +. d, cy -. h),
+    (cx +. l, cy), (cx +. d, cy +. h), (cx -. d, cy +. h))
+  in
+  let (x0,y0), (x1,y1), (x2,y2), (x3,y3), (x4,y4), (x5, y5) = points in
+  let points:string = Printf.sprintf
+    "%f,%f %f,%f %f,%f %f,%f %f,%f %f,%f %f,%f"
+    x0 y0 x1 y1 x2 y2 x3 y3 x4 y4 x5 y5 x0 y0
+  in
+  Printf.sprintf "<polygon class='%s' points='%s'></polygon>"
+    c points
+
+let mk_hexagon r (cx, cy) =
   let points = ((cx-30, cy), (cx-15, cy-26), (cx+15, cy-26),
     (cx+30, cy), (cx+15, cy+26), (cx-15, cy+26))
   in
@@ -20,8 +37,8 @@ let mk_hexagon name r (cx, cy) =
     "%d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d"
     x0 y0 x1 y1 x2 y2 x3 y3 x4 y4 x5 y5 x0 y0
   in
-  Printf.sprintf "<polygon id='%s' class='%s' points='%s'></polygon>"
-    name r points
+  Printf.sprintf "<polygon class='%s' points='%s'></polygon>"
+    r points
 
 let mk_line (x1,y1) (x2,y2) =
   Printf.sprintf "<line x1='%f' y1='%f' x2='%f' y2='%f' class='river' />"

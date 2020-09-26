@@ -69,7 +69,8 @@ end
 
 let mk_apprentice tile =
   let name = Core.Name.gen_name "Apprentice" in
-  new elt name tile
+  let obj = new elt name tile in
+  obj
 
 let apprentice_rule oref : Object.t Environ.rule =
     let apprentice = Attribute.Api.Spawn

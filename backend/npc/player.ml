@@ -1,4 +1,5 @@
 open Core
+
 let _ = Random.self_init ()
 
 type player_state = {
@@ -38,6 +39,17 @@ class elt name tile = object (self)
         space.cancel_event (self:>Object.t);
         space.register_event (Timer.of_int 1) (self:>Object.t)
       end
+    | Ok (Attack id) -> begin
+        try
+          (* Might Raise Not_found *)
+          let target = space.get_npc (UID.UID.of_string id) in
+          let mstate, _ = Common.Api.CommonState.fight_state state target in
+          state <- mstate;
+          space.cancel_event (self:>Object.t);
+          space.register_event (Timer.of_int 1) (self:>Object.t)
+        with _ ->
+          raise (Sdk.Command.InvalidCommand (id ^ " Not_found"))
+      end
     | _ -> raise (Sdk.Command.InvalidCommand
         (Yojson.Safe.to_string command)
       )
@@ -45,5 +57,11 @@ class elt name tile = object (self)
 end
 
 let mk_player tile =
+    let open Common in
     let name = Core.Name.gen_name "Player" in
-    new elt name tile
+    let obj = new elt name tile in
+    let basic_features = Level.BasicSystem.make_features 150 in
+    let wuxing_features = Level.WuXingSystem.make_features 150 in
+    obj#take_features basic_features;
+    obj#take_features wuxing_features;
+    obj

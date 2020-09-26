@@ -58,16 +58,18 @@ let build_feature center f =
   let feature_info = List.map (fun c ->int_of_string c) (List.tl feature_info) in
   match feature_name with
   | "river" -> (WaterPath.make_path_svg (to_float center) feature_info)
-  | _ -> Printf.sprintf "<g><use href='/dist/res/%s.svg#main' x='%d' y='%d' width='40' height='40'/></g>"
+  | _ -> Printf.sprintf "<use href='/dist/res/%s.svg#main' x='%d' y='%d' width='40' height='40'/>"
     feature_name (x-20) (y-20)
 
 (* Make a single hexagon tile *)
-let build_tile i pos =
+let build_tile i pos feature_svg =
   let open Tile in
   let name = i |. nameGet in
   let typ_no = i |. ttypeGet |. baseGet in
   let style = Printf.sprintf "hex_%s" typ_no in
-  SvgHelper.mk_hexagon name style pos
+  let svg = SvgHelper.mk_hexagon style pos in
+  let svg = svg ^ feature_svg in
+  mk_group name svg
 
 let display_info info =
   let open Tile in
@@ -86,9 +88,14 @@ let handle_click info () =
   (*let menu = Document.get_by_id Document.document "menu" in *)
   let open Tile in
   let cor = (info |. locGet |. xGet), (info |. locGet |. yGet) in
-  if (Action.feed_state (info |. nameGet) cor ) then
-    Menu.reset_assist_menu ()
-  else begin
+  let reset = if (Action.state_wait_for_coordinate ()) then begin
+      if (Action.feed_state (info |. nameGet) cor ) then begin
+        Menu.reset_assist_menu ();
+        false
+      end else true
+    end else true
+  in
+  if reset then begin
     Action.reset_state ();
     Menu.build_menu (display_info info) (fun _ -> Action.({
     ids=[]; svg=""}))
@@ -109,9 +116,9 @@ let build_tiles tiles uinfo container=
   let svgs = Array.mapi (fun i info ->
     let cor = HexCoordinate.from_index i in
     let layout = HexCoordinate.layout cor in
-    let svg = build_tile info layout in
     let tile_feature = info |. ttypeGet |. featuresGet in
-    Array.fold_left (fun svg f -> svg ^ (build_feature layout f)) svg tile_feature
+    let feature_svg = Array.fold_left (fun svg f -> svg ^ (build_feature layout f)) "" tile_feature in
+    build_tile info layout feature_svg
   ) tiles in
   let innerHTML = Array.fold_left (fun acc c -> acc ^ c) "" svgs in
   Document.setInnerHTML container innerHTML;

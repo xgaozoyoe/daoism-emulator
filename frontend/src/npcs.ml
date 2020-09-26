@@ -62,7 +62,7 @@ let candidate_builder uinfo info command_string =
     let id = Printf.sprintf "tile_%d" (HexCoordinate.get_index cor) in
     let layout = HexCoordinate.layout cor in
     let command = Action.mk_command_info command_string name in
-    let svg = svg ^ (SvgHelper.mk_rectangle command_string (5,5) layout) in
+    let svg = svg ^ (SvgHelper.mk_hexagon_boundary 27 "hex_hint" layout) in
     (id,cor,command) :: ids, svg
   ) ([], "") cands in
   Action.({ids=ids; svg=svg})

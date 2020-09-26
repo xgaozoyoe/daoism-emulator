@@ -40,17 +40,18 @@ let dump env =
     acc ^ ", <" ^ require ^ ">"
   ) c env.rules
 
-let to_json env =
+let to_json (env: 'a t) : Yojson.Basic.t =
   let fs = FeatureMap.fold (fun _ (attr,i) acc ->
     acc @ [(Attribute.to_string attr, `Int i)]
   ) env.features [] in
-  let rules = List.fold_left (fun acc (attrs, _) ->
+  let rules = List.fold_left (fun acc (attrs, (f, _)) ->
     let require = Array.fold_left (fun acc (attr,i) ->
       acc @ [(Attribute.to_string attr, `Int i)]
     ) [] attrs in
-    acc @ [`Assoc require]
+    let result = Feature.to_string f in
+    acc @ [`Assoc [("require", `Assoc require); ("result", `String result)]]
   ) [] env.rules in
-  `Assoc [("features", `Assoc fs); ("Rules", `List rules)]
+  `Assoc [("features", `Assoc fs); ("rules", `List rules)]
 
 let set_bound (attr, amount) env =
   env.bounds <- update_entry attr (fun _ -> Some (attr, amount))

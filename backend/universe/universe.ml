@@ -5,7 +5,7 @@ module Tile = Tiles.Api
 open Utils
 open Core
 
-module ID = UID.Make(UID.Id)
+module ID = UID.UID
 module ObjectSet = Set.Make (Object)
 
 type config = {
@@ -103,6 +103,7 @@ class elt n = object(self)
       ) [] tiles);
       get_tile = (fun cor -> Some (Coordinate.get_node cor tiles));
       set_active = (fun o -> update <- ObjectSet.add o update);
+      get_npc = (fun id -> Hashtbl.find npcs id);
     }
 
   method get_update: Yojson.Basic.t =
