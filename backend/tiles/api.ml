@@ -1,7 +1,6 @@
 open Core
 open Space
 open Lwt.Syntax
-open Common
 
 module Npc = Npc.Api
 
@@ -11,9 +10,9 @@ class elt n ttype cor ds = object (self)
 
   inherit Object.elt n cor
 
-  val mutable state_trans: tile_state Object.state_trans = ds
+  val mutable state_trans = ds
 
-  val mutable state = {deliver=[||]; name="初"}
+  val mutable state = Common.Api.({deliver=[||]; description="初"; state=()})
 
   val mutable holds: Object.t list = []
 
@@ -22,7 +21,7 @@ class elt n ttype cor ds = object (self)
   method to_json = `Assoc [
     ("name",`String self#get_name)
     ; ("ttype", Default.to_json tile_type)
-    ; ("state", tile_state_to_json state)
+    ; ("state", Common.Api.state_to_json state (fun _ -> `String "" ))
     ; ("loc", Space.to_json self#get_loc)
     ; ("env", Environ.to_json self#get_env)
   ]

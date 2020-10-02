@@ -11,6 +11,21 @@ let mk_rectangle style (w,h) (cx, cy) =
   in
   Printf.sprintf "<polygon class='%s' points='%s'></polygon>" style points
 
+let mk_rad_boundary r n c (cx, cy) =
+  let r = Js.Int.toFloat r in
+  let cx = Js.Int.toFloat cx in
+  let cy = Js.Int.toFloat cy in
+  let delta = 2.0 *. Js.Math._PI /. (Js.Int.toFloat n) in
+  let parray = Array.init n (fun i -> (
+      cx +. r *. Js.Math.cos((Js.Int.toFloat i) *. delta)
+    , cy +. r *. Js.Math.sin((Js.Int.toFloat i) *. delta))
+  ) in
+  let points = Array.fold_left (fun acc (x,y) ->
+    acc ^ (Printf.sprintf " %f,%f " x y)
+  ) "" parray in
+  Printf.sprintf "<polygon class='%s' points='%s'></polygon>"
+    c points
+
 let mk_hexagon_boundary r c (cx, cy) =
   let cx = Js.Int.toFloat cx in
   let cy = Js.Int.toFloat cy in
@@ -70,12 +85,13 @@ let mk_button_in container name (w, h) (cx, cy) txt cb =
   Document.appendChild container item;
   Document.add_event_listener item "click" cb
 
-let mk_rectangle_in container (w,h) (cx, cy) =
+let mk_rectangle_in container c (w,h) (cx, cy) =
   let points = Printf.sprintf
     "%d,%d %d,%d %d,%d %d,%d %d,%d"
     cx cy (cx+w) cy (cx+w) (cy+h) cx (cy+h) cx cy
   in
   let item = Document.createElementSVG Document.document "polygon" in
-  item |. Document.setAttribute "class" "menu";
+  item |. Document.setAttribute "class" c;
   item |. Document.setAttribute "points" points;
-  Document.appendChild container item
+  Document.appendChild container item;
+  item

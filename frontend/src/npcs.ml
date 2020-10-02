@@ -1,8 +1,9 @@
+open Common
 open Global
 module Npc = struct
-
   type environ = {
-    features:int Js.Dict.t
+    features:int Js.Dict.t;
+    rules: rule array
   }[@@bs.deriving abstract]
 
   type location = {
@@ -43,10 +44,11 @@ let display_info info =
     ]
     @ (Array.to_list (Js.Dict.entries (info |. stateGet |. extraGet)))
   in
+  let rules = info |. envGet |. rulesGet in
   let attrs = info |. envGet |. featuresGet in
   let methods = info |. commandGet in
   Js.log methods;
-  Menu.mk_menu (avatar, 40) i attrs methods
+  Menu.mk_menu (avatar, 40) i attrs methods rules
 
 let candidate_builder uinfo info command_string =
   let open Npc in
@@ -74,9 +76,10 @@ let handle_click name uinfo () =
   | None -> assert false
   | Some info -> begin
       let cor = (info |. locGet |. xGet), (info |. locGet |. yGet) in
-      if (Action.feed_state (info |. nameGet) cor) then
+      if (Action.feed_state (info |. nameGet) cor) then begin
+        Action.reset_state ();
         Menu.reset_assist_menu ()
-      else begin
+      end else begin
         Action.reset_state ();
         Menu.build_menu (display_info info) (candidate_builder uinfo info)
       end

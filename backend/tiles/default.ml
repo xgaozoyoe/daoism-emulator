@@ -1,4 +1,3 @@
-open Common
 open Core
 
 type tile_feature =
@@ -9,11 +8,11 @@ type tile_feature =
   | Grass of int list
 
 let produce_of_feature = function
-  | Peak _ -> [Feature.mk_produce (Attribute.WuXing AttributeWuXing.Jing) 1]
+  | Peak _ -> [Feature.mk_produce (Attribute.Api.WuXing Attribute.WuXing.Jing) 1]
   | River _ -> []
-  | Cave _ -> [Feature.mk_produce (Attribute.WuXing AttributeWuXing.Huo) 1]
-  | Reef _ -> [Feature.mk_produce (Attribute.WuXing AttributeWuXing.Shui) 1]
-  | Grass _ -> [Feature.mk_produce (Attribute.WuXing AttributeWuXing.Tu) 1]
+  | Cave _ -> [Feature.mk_produce (Attribute.Api.WuXing Attribute.WuXing.Huo) 1]
+  | Reef _ -> [Feature.mk_produce (Attribute.Api.WuXing Attribute.WuXing.Shui) 1]
+  | Grass _ -> [Feature.mk_produce (Attribute.Api.WuXing Attribute.WuXing.Tu) 1]
 
 let feature_id = function
   | River ls -> List.fold_left (fun acc c -> Printf.sprintf "%s_%d" acc c) "river" ls
@@ -64,13 +63,14 @@ let tile_type_array = [|Mountain; Water; Grassland; Forest |]
 let make_default_state _ ttyp timeslice = fun state _ _ ->
   let es = List.fold_left (fun acc f -> (produce_of_feature f) @ acc) [] ttyp.features in
   let t = match es with | [] -> None | _ -> Some timeslice in
-  { state with deliver = Array.map (fun es -> (es, None)) (Array.of_list es) }, t
+  Common.Api.{ state with deliver = Array.map (fun es -> (es, None)) (Array.of_list es) }, t
 
 let set_default_bound _ _ bound tile =
-  let bounds = [| (Attribute.WuXing AttributeWuXing.Jing), bound
-    ; (Attribute.WuXing AttributeWuXing.Shui), bound
-    ; (Attribute.WuXing AttributeWuXing.Tu), bound
-    ; (Attribute.WuXing AttributeWuXing.Huo), bound
-    ; (Attribute.WuXing AttributeWuXing.Mu), bound
+  let bounds = [|
+      (Attribute.Api.WuXing Attribute.WuXing.Jing), bound
+    ; (Attribute.Api.WuXing Attribute.WuXing.Shui), bound
+    ; (Attribute.Api.WuXing Attribute.WuXing.Tu), bound
+    ; (Attribute.Api.WuXing Attribute.WuXing.Huo), bound
+    ; (Attribute.Api.WuXing Attribute.WuXing.Mu), bound
     |] in
   Array.iter (fun b -> Environ.set_bound b tile#get_env) bounds

@@ -1,25 +1,37 @@
+open Common
 type avatar_builder = (int * int) -> string
 type menu = {
   avatar: avatar_builder * int; (* svg txt + height *)
   info: string Js.Dict.t;
   attributes: int Js.Dict.t;
   methods: string Js.Dict.t;
+  rules: rule array;
 }
 
-let mk_menu a i attr ms = {
+type layout_info = {
+  left: int;
+  top: int;
+  padding: int;
+  font_size: int;
+}
+
+let mk_menu a i attr ms rs = {
   avatar = a;
   info = i;
   attributes = attr;
   methods = ms;
+  rules = rs;
 }
 
 let reset_menu () =
   let menu_container = Document.get_by_id Document.document "menu-background" in
   let menu_ctx = Document.get_by_id Document.document "menu-ctx" in
   let menu_assist = Document.get_by_id Document.document "menu-assist" in
+  let menu_fix = Document.get_by_id Document.document "menu-fix" in
   Document.setInnerHTML menu_container "";
   Document.setInnerHTML menu_ctx "";
-  Document.setInnerHTML menu_assist ""
+  Document.setInnerHTML menu_assist "";
+  Document.setInnerHTML menu_fix ""
 
 let reset_assist_menu () =
   let menu_assist = Document.get_by_id Document.document "menu-assist" in
@@ -29,61 +41,146 @@ let build_menu_hint svg =
   let menu_assist = Document.get_by_id Document.document "menu-assist" in
   Document.setInnerHTML menu_assist svg
 
-let build_fix_menu _ =
-  let left = 20 in
-  let top = 20 in
-  let top_offset = top in
+let content_start = {left=20; top=20; padding=5; font_size=18}
+
+let show_panel cb () =
+  let menu_container = Document.get_by_id Document.document "menu-ctx" in
+  let menu_assist = Document.get_by_id Document.document "menu-assist" in
+  let menu_bg = Document.get_by_id Document.document "menu-background" in
+  Document.setInnerHTML menu_container "";
+  Document.setInnerHTML menu_assist "";
+  Document.setInnerHTML menu_bg "";
+  cb menu_container
+
+let build_panel avatar (left, top) cb =
   let menu_fix = Document.get_by_id Document.document "menu-fix" in
-  SvgHelper.mk_rectangle_in menu_fix (30,30) (left,top_offset)
 
-let build_menu menu candidate_builder =
-  build_fix_menu ();
-  reset_menu ();
-  let left = 20 in
-  let top = 60 in
-  let padding = 5 in
-  let padding_left = 10 in
-  let font_height = 18 in
+  (* Adding panel tab into menu-fix *)
+  let tab = Document.createElementSVG Document.document "g" in
+  Document.appendChild menu_fix tab;
+  let avatar_content, avatar_height = avatar in
+  let top_center = top + avatar_height/2 in
+  let left_center = left + avatar_height/2 in
+  let content = avatar_content (left_center, top_center) in
+  Document.setInnerHTML tab content;
+  let _ = SvgHelper.mk_rectangle_in tab "menu-rect" (40,40)
+    (left,top) in
+  Document.add_event_listener tab "click" (show_panel cb)
 
-  (* We start with avatar *)
-  let top_offset = top + padding in
-  let left_offset = left + padding_left in
-  let avatar_content, avatar_height = menu.avatar in
-  let content = avatar_content (left_offset + avatar_height/2, top_offset + avatar_height/2) in
-  let top_offset = top_offset + avatar_height + 2 * padding in
+let panel_start = {left=20; top=70; padding=5; font_size=18}
 
+(* show diction attributes *)
+let build_dict_attrs dict to_string pinfo outter =
+  let g = Document.createElementSVG Document.document "g" in
+  let left = pinfo.left + pinfo.padding in
   let info, top_offset = Array.fold_left (fun (acc,top_offset) (name, info) ->
     let c = SvgHelper.mk_text "menu-item"
-        (left_offset, top_offset)
-        (name ^ ":" ^ info)
+        (left, top_offset)
+        (name ^ ":" ^ (to_string info))
     in
-    (acc ^ c), top_offset + font_height + padding
-  ) ("", top_offset) (Js.Dict.entries menu.info) in
+    (acc ^ c), top_offset + pinfo.font_size + pinfo.padding
+  ) ("", pinfo.top + pinfo.padding + pinfo.font_size) (Js.Dict.entries dict) in
+  Document.setInnerHTML g info;
+  Document.appendChild outter g;
+  top_offset - pinfo.font_size + pinfo.padding
 
-  let attributes, top_offset = Array.fold_left (fun (acc,top_offset) (name, info) ->
+let build_rules rules pinfo outter =
+  let g = Document.createElementSVG Document.document "g" in
+  let top_offset = pinfo.top + pinfo.padding + pinfo.font_size in
+  let left_offset = pinfo.left + pinfo.padding in
+  let (info, top_offset) = Array.fold_left (fun (acc, top) rule ->
+    let req = rule |. requireGet in
+    let result = rule |. resultGet in
     let c = SvgHelper.mk_text "menu-item"
-        (left_offset, top_offset)
-        (name ^ ":" ^ (string_of_int info))
+        (left_offset, top)
+        result
     in
-    (acc ^ c), top_offset + font_height + padding
-  ) ("", top_offset) (Js.Dict.entries menu.attributes) in
+    let acc = acc ^ c in
+    let top_offset = top_offset + pinfo.padding + pinfo.font_size in
+    let left_offset = left_offset + pinfo.padding * 2 in
+    Array.fold_left (fun (acc, top) (name,value) ->
+      let c = SvgHelper.mk_text "menu-item"
+        (left_offset, top)
+        (name ^ ":" ^ string_of_int value)
+      in
+      (acc ^ c), top + pinfo.font_size + pinfo.padding
+    ) (acc, top_offset) (Js.Dict.entries req)
+  )  ("", top_offset) rules
+  in
+  Document.setInnerHTML g info;
+  Document.appendChild outter g;
+  top_offset
 
-  let menu_container = Document.get_by_id Document.document "menu-ctx" in
-  Document.setInnerHTML menu_container (content ^ info ^ attributes);
-
+let build_menu_methods methods hint_builder pinfo outter =
   (* Dynamic buttons with event handler *)
-  let top_offset = Array.fold_left (fun top_offset (name, info) ->
+  let top_offset = pinfo.top in
+  let left_offset = pinfo.left + pinfo.padding in
+  let left_boundary = pinfo.left + 200 in
+  let button_width = 30 in
+  let (_, top_offset) = Array.fold_left (fun (left, top) (name, info) ->
     let open Action in
-    let cands = candidate_builder info in
+    let cands = hint_builder info in
     let command () = begin
         build_menu_hint cands.svg;
         Action.push_state info cands
     end in
-    SvgHelper.mk_button_in menu_container ("btn-"^name) (60, 20)
-      (left_offset, top_offset)
-      name command;
-    top_offset + font_height + padding
-  ) top_offset (Js.Dict.entries menu.methods) in
+    let _ = SvgHelper.mk_button_in outter ("btn-"^name) (button_width, button_width)
+      (left, top) name command in
+    let (left, top) =
+      if (left + pinfo.padding * 2 + button_width > left_boundary) then
+        (left + pinfo.padding + button_width , top)
+      else
+        (left + pinfo.padding + button_width, top)
+        (*left_offset, top + button_width + pinfo.padding*)
+    in
+    (left, top)
+  ) (left_offset, top_offset) (Js.Dict.entries methods) in
+  top_offset
 
-  let menu_container = Document.get_by_id Document.document "menu-background" in
-  SvgHelper.mk_rectangle_in menu_container (200,top_offset) (left,top)
+let build_menu menu hint_builder =
+
+  reset_menu ();
+
+  let pinfo = panel_start in
+
+  (* Panel one, contains base info and methods *)
+  let base_cb outter = begin
+    let top_offset = build_dict_attrs menu.info (fun x -> x)
+        panel_start outter in
+    let top_offset = build_menu_methods menu.methods hint_builder
+        {pinfo with top = top_offset} outter in
+    let menu_container = Document.get_by_id Document.document "menu-background" in
+    SvgHelper.mk_rectangle_in menu_container "menu" (200,top_offset)
+        (panel_start.left, panel_start.top)
+  end in
+  build_panel menu.avatar (20,20) base_cb;
+
+  (* Panel two, contains attributes info *)
+  let attributes_cb outter = begin
+    let top_offset = build_dict_attrs menu.attributes (fun x -> string_of_int x)
+        panel_start outter in
+    let menu_container = Document.get_by_id Document.document "menu-background" in
+    SvgHelper.mk_rectangle_in menu_container "menu" (200,top_offset)
+        (panel_start.left, panel_start.top)
+  end in
+
+  (* Panel three, contains rules info *)
+  let rules_cb outter = begin
+    let top_offset = build_rules menu.rules panel_start outter in
+    let menu_container = Document.get_by_id Document.document "menu-background" in
+    SvgHelper.mk_rectangle_in menu_container "menu" (200,top_offset)
+        (panel_start.left, panel_start.top)
+  end in
+
+  let attr_avatar = (fun (cl, ct) -> SvgHelper.mk_text "menu-item" (cl, ct + 10) "B"), 30 in
+  build_panel attr_avatar (70,20) attributes_cb;
+
+  let dao_avatar = (fun (cl, ct) -> SvgHelper.mk_text "menu-item" (cl, ct + 10) "D"), 30 in
+  build_panel dao_avatar (120,20) rules_cb;
+
+  let dao_avatar = (fun (cl, ct) -> SvgHelper.mk_text "menu-item" (cl, ct + 10) "P"), 30 in
+  build_panel dao_avatar (170,20) attributes_cb;
+
+  ignore @@ show_panel base_cb ();
+
+  ()

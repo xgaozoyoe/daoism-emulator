@@ -1,7 +1,12 @@
 open SvgHelper
 open Global
+open Common
 
 module Tile = struct
+  type environ = {
+    features:int Js.Dict.t;
+    rules: rule array
+  }[@@bs.deriving abstract]
 
   type location = {
     x:int;
@@ -17,6 +22,7 @@ module Tile = struct
     name:string;
     ttype:tile_type;
     loc:location;
+    env:environ;
   } [@@bs.deriving abstract]
 
 end
@@ -79,9 +85,12 @@ let display_info info =
     "name", info |. nameGet;
     "type", info |. ttypeGet |. baseGet;
   ] in
+  let rules = info |. envGet |. rulesGet in
+  Js.log (rules);
+  Js.log (Array.length rules);
   let attrs = Js.Dict.fromList [] in
   let methods = Js.Dict.fromList [] in
-  Menu.mk_menu (avatar,10) i attrs methods
+  Menu.mk_menu (avatar,10) i attrs methods rules
 
 
 let handle_click info () =
