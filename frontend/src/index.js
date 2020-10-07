@@ -17,7 +17,7 @@ ws.onmessage = function(event) {
     var tiles_container = document.getElementById("tiles");
     var npcs_container = document.getElementById("npcs");
     if (connected) {
-        console.log(event.data);
+        /* console.log(event.data); */
         var json = JSON.parse(event.data);
         if (json.method == "global") {
           var global = json.data;

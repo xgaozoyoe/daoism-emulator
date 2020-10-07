@@ -40,6 +40,9 @@ let dump env =
     acc ^ ", <" ^ require ^ ">"
   ) c env.rules
 
+let elt_to_json (attr, n) =
+  `Assoc [(Attribute.to_string attr, `Int n)]
+
 let to_json (env: 'a t) : Yojson.Basic.t =
   let fs = FeatureMap.fold (fun _ (attr,i) acc ->
     acc @ [(Attribute.to_string attr, `Int i)]
@@ -76,6 +79,15 @@ let proceed_feature feature env =
     env.features <- update_entry attr (fun _ ->
       Some (attr, amount)
     ) (fun _ -> Some (attr, amount)) env.features
+
+let replace_feature (attr, amount) env =
+  let rep = ref None in
+  env.features <- update_entry attr (fun (attr', amount') -> begin
+      rep := Some (attr', amount') ;
+      Some (attr, amount)
+    end
+  ) (fun _ -> Some (attr, amount)) env.features;
+  !rep
 
 let install_rule (rule:'a) env =
   env.rules <- rule :: env.rules

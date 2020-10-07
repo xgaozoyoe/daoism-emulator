@@ -1,6 +1,6 @@
 let population = ref 0
 
-let max_population = 60
+let max_population = 3
 
 let _ = Random.self_init ()
 
@@ -8,8 +8,7 @@ let increase_population _ =
   population := !population + 1
 
 let try_spawn _ =
-  let t = Random.int max_population in
-  if t > !population then
+  if max_population > !population then
     true
   else
     false

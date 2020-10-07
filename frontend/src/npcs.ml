@@ -1,21 +1,6 @@
 open Common
 open Global
 module Npc = struct
-  type environ = {
-    features:int Js.Dict.t;
-    rules: rule array
-  }[@@bs.deriving abstract]
-
-  type location = {
-    x:int;
-    y:int;
-  }[@@bs.deriving abstract]
-
-  type state = {
-    description:string;
-    extra: string Js.Dict.t;
-  }[@@bs.deriving abstract]
-
   type t = {
     name:string;
     state:state;
@@ -44,11 +29,12 @@ let display_info info =
     ]
     @ (Array.to_list (Js.Dict.entries (info |. stateGet |. extraGet)))
   in
+  let deliver = info |. stateGet |. deliverGet in
   let rules = info |. envGet |. rulesGet in
   let attrs = info |. envGet |. featuresGet in
   let methods = info |. commandGet in
   Js.log methods;
-  Menu.mk_menu (avatar, 40) i attrs methods rules
+  Menu.mk_menu (avatar, 40) i attrs methods rules deliver
 
 let candidate_builder uinfo info command_string =
   let open Npc in
@@ -81,7 +67,7 @@ let handle_click name uinfo () =
         Menu.reset_assist_menu ()
       end else begin
         Action.reset_state ();
-        Menu.build_menu (display_info info) (candidate_builder uinfo info)
+        Menu.build_menu (info |. nameGet) (display_info info) (candidate_builder uinfo info)
       end
     end
 
@@ -94,11 +80,6 @@ let build_npc_content info uinfo =
   let tile_cor = info |. locGet in
   let cor = (tile_cor |. xGet), (tile_cor |. yGet) in
   let layout = HexCoordinate.layout cor in
-  (*
-  let state = info |. stateGet in
-  let desc = state |. descriptionGet in
-  let hint = SvgHelper.mk_text layout desc in
-  *)
   build_npc_avatar info layout
 
 let add_npc info uinfo container =
@@ -109,6 +90,7 @@ let add_npc info uinfo container =
   Js.Dict.set npc_map name info;
   Document.appendChild container item;
   Document.setInnerHTML item (build_npc_content info uinfo);
+  item |. Document.setAttribute "class" (info |. stateGet |. descriptionGet);
   Document.add_event_listener item "click" (handle_click name uinfo)
 
 let update_npc info uinfo container =
@@ -119,7 +101,14 @@ let update_npc info uinfo container =
   | Some _ -> begin
       Js.Dict.set npc_map name info;
       let item = Document.get_by_id Document.document name in
-      Document.setInnerHTML item (build_npc_content info uinfo)
+      Document.setInnerHTML item (build_npc_content info uinfo);
+      item |. Document.setAttribute "class" (info |. stateGet |. descriptionGet);
+      Js.log(name);
+      Js.log(Menu.current_focus ());
+      if (Menu.is_current_focus name) then begin
+        Js.log("current focus");
+        Menu.build_menu name (display_info info) (candidate_builder uinfo info)
+      end else ()
     end
 
 let build_npcs npcs uinfo container =

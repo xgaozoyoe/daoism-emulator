@@ -1,27 +1,20 @@
 open SvgHelper
 open Global
-open Common
 
 module Tile = struct
-  type environ = {
-    features:int Js.Dict.t;
-    rules: rule array
-  }[@@bs.deriving abstract]
-
-  type location = {
-    x:int;
-    y:int;
-  }[@@bs.deriving abstract]
+  open Common
 
   type tile_type = {
     base:string;
     features: string array;
   } [@@bs.deriving abstract]
 
+
   type tile_info = {
     name:string;
-    ttype:tile_type;
+    state:state;
     loc:location;
+    ttype:tile_type;
     env:environ;
   } [@@bs.deriving abstract]
 
@@ -85,18 +78,19 @@ let display_info info =
     "name", info |. nameGet;
     "type", info |. ttypeGet |. baseGet;
   ] in
-  let rules = info |. envGet |. rulesGet in
+  let deliver = info |. stateGet |. Common.deliverGet in
+  let rules = info |. envGet |. Common.rulesGet in
   Js.log (rules);
   Js.log (Array.length rules);
   let attrs = Js.Dict.fromList [] in
   let methods = Js.Dict.fromList [] in
-  Menu.mk_menu (avatar,10) i attrs methods rules
+  Menu.mk_menu (avatar,10) i attrs methods rules deliver
 
 
 let handle_click info () =
   (*let menu = Document.get_by_id Document.document "menu" in *)
   let open Tile in
-  let cor = (info |. locGet |. xGet), (info |. locGet |. yGet) in
+  let cor = (info |. locGet |. Common.xGet), (info |. locGet |. Common.yGet) in
   let reset = if (Action.state_wait_for_coordinate ()) then begin
       if (Action.feed_state (info |. nameGet) cor ) then begin
         Menu.reset_assist_menu ();
@@ -106,7 +100,7 @@ let handle_click info () =
   in
   if reset then begin
     Action.reset_state ();
-    Menu.build_menu (display_info info) (fun _ -> Action.({
+    Menu.build_menu (info |. nameGet) (display_info info) (fun _ -> Action.({
     ids=[]; svg=""}))
   end
 

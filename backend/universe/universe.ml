@@ -75,8 +75,8 @@ class elt n = object(self)
   val npcs:(ID.t, Object.t) Hashtbl.t = Hashtbl.create 10
   val buildings:(ID.t, Object.t) Hashtbl.t = Hashtbl.create 10
   val mutable tiles = [||]
-  val mutable events: Event.t list = []
-  val mutable event_queue = Timer.TriggerQueue.empty
+  val mutable events: Object.t Event.t list = []
+  val event_queue = ref (Timer.TriggerQueue.mk_head Timer.TriggerQueue.empty)
   val mutable update = ObjectSet.empty
   val config = default_config ()
 
@@ -92,10 +92,13 @@ class elt n = object(self)
       get_path = (fun _ _ -> [||]);
       the_universe = (fun _ -> (self :> Object.t));
       cancel_event = (fun o ->
-        event_queue <- Timer.TriggerQueue.cancel_event o event_queue
+        let e = o#get_event_entry in
+        Timer.TriggerQueue.cancel_event e;
+        o#set_event_entry Timer.TriggerQueue.empty
       );
       register_event = (fun t o ->
-        event_queue <- Timer.TriggerQueue.register_event t o event_queue
+        o#set_event_entry @@
+            Timer.TriggerQueue.register_event t o event_queue
       );
       get_view = (fun cor ->
         Coordinate.sibling_fold cor (fun acc _ sibling _ ->
@@ -143,55 +146,53 @@ class elt n = object(self)
 
   method handle_event space src feature =
     match feature with
-    | Feature.Produce (Attribute.Api.Spawn attr, _)
-      when Population.try_spawn () -> begin
-        Population.increase_population ();
+    | Feature.Produce (Attribute.Api.Spawn attr, _) -> begin
         let obj = match attr with
-        | Attribute.Spawn.Apprentice crk -> crk src.(0)
-        | Attribute.Spawn.Creature crk -> crk src.(0)
-        | Attribute.Spawn.Mob crk -> crk src.(0)
-        | Attribute.Spawn.God crk -> crk src.(0)
-        | Attribute.Spawn.Building crk -> crk src.(0)
+        | Attribute.Spawn.Apprentice crk
+          when Population.try_spawn () -> begin
+            Population.increase_population ();
+            Some (crk src)
+          end
+        | Attribute.Spawn.Creature crk -> Some (crk src)
+        | Attribute.Spawn.Mob crk -> Some (crk src)
+        | Attribute.Spawn.God crk -> Some (crk src)
+        | Attribute.Spawn.Building crk -> Some (crk src)
+        | _ -> None
         in
-        Hashtbl.add npcs (ID.of_string obj#get_name) (obj:>Object.t);
-        let x,y = obj#get_loc in
-        let* _ = Lwt_io.printf "%s spawn at location (%d,%d)\n" obj#get_name x y in
-        space.register_event (Timer.of_int 1) (obj:>Object.t);
-        Lwt.return []
+        match obj with
+        | Some obj -> begin
+            Hashtbl.add npcs (ID.of_string obj#get_name) (obj:>Object.t);
+            let x,y = obj#get_loc in
+            let* _ = Lwt_io.printf "%s spawn at location (%d,%d)\n" obj#get_name x y in
+            space.register_event (Timer.of_int 1) (obj:>Object.t);
+            Lwt.return []
+          end
+        | _ -> Lwt.return []
       end
-    | Feature.Hold (Attribute.Api.Object Attribute.Api.Dead, _) ->
-      let npc = src.(0) in
+    | Feature.Hold (Attribute.Api.Notice Attribute.Api.Dead, _) ->
+      let npc = src in
+      self#space.cancel_event npc;
       Hashtbl.remove npcs (ID.of_string npc#get_name);
       Lwt.return []
     | _ -> Lwt.return []
 
-  method step space = begin
-    update <- ObjectSet.empty;
-    let* _ = Lwt_io.printf ("step...\n") in
-    (* let* _ = Timer.TriggerQueue.dump event_queue (fun x -> x#get_name) in *)
-    let* left_evts = Lwt_list.fold_left_s (fun acc e ->
-      let target = Event.get_target e in
-      let* evts = target#handle_event (self#space) (Event.get_source e) (Event.get_feature e) in
-      (* FIXME: might trigger extra events *)
-      Lwt.return @@ acc @ (List.map (fun (f,s,t) -> Event.mk_event f s t) evts)
-    ) [] events in
-
-    let seq, queue = Timer.TriggerQueue.fetch_events [] event_queue true in
-    event_queue <- queue;
-    let* _ = Lwt_io.printf ("trigger %d objs\n") (List.length seq) in
+  method fetch_and_handle_events space = begin
+    let seq = Timer.TriggerQueue.fetch_events event_queue true in
+    let* _ = Timer.TriggerQueue.dump !event_queue (fun x -> x#get_name) in
 
     let* evts = Lwt_list.fold_left_s (fun acc v ->
       let* es = v#step space in
-      let* new_events = Lwt_list.map_s (fun (f, s, t) -> Lwt.return (Event.mk_event f s t)) es in
-      Lwt.return @@ new_events @ acc
+      Lwt.return @@ es @ acc
     ) [] seq in
 
     let my_events, deliver_events =
       List.partition (fun e -> (Event.get_target e)#get_name = self#get_name)
       evts
     in
-    let* _ = Lwt_list.iter_s (fun e -> Logger.event_log "[ my event: %s ]\n" (Event.to_string e)) my_events in
-    let* _ = Lwt_list.iter_s (fun e -> Logger.event_log "[ deliver event: %s ]\n" (Event.to_string e)) deliver_events in
+    let* _ = Lwt_list.iter_s (fun e -> Logger.event_log "[ universe event: %s ]\n"
+        (Event.log_string (fun x->x#get_name) e)) my_events in
+    let* _ = Lwt_list.iter_s (fun e -> Logger.event_log "[ deliver event: %s ]\n"
+        (Event.log_string (fun x->x#get_name) e)) deliver_events in
 
     (* Handle events that are generated for universe *)
     let* _ = Lwt_list.iter_s (fun e ->
@@ -201,22 +202,38 @@ class elt n = object(self)
       Lwt.return_unit
     ) my_events in
 
-    (* Second chance events *)
-    let* left_evts = Lwt_list.fold_left_s (fun acc e ->
-      let target = Event.get_target e in
-      let* evts = target#handle_event (self#space) (Event.get_source e) (Event.get_feature e) in
-      (* FIXME: might trigger extra events *)
-      Lwt.return @@ acc @ (List.map (fun (f,s,t) -> Event.mk_event f s t) evts)
-    ) [] (left_evts @ deliver_events) in
+    Lwt.return deliver_events
+  end
 
-    events <- left_evts;
-    Lwt.return []
+
+  method step space : Object.t Event.t list Lwt.t= begin
+    update <- ObjectSet.empty;
+    let* _ = Lwt_io.printf ("step...\n") in
+    let rec aux (evts:Object.t Event.t list) = begin
+      let* left_evts = Lwt_list.fold_left_s (fun acc e ->
+        let target = Event.get_target e in
+        let* evts = target#handle_event (self#space) (Event.get_source e) (Event.get_feature e) in
+        Lwt.return @@ acc @ evts
+      ) [] evts in
+
+      (* uncomment this to debug event_queue
+       * let* _ = Timer.TriggerQueue.dump event_queue (fun x -> x#get_name) in
+       *)
+      let* _ = Timer.TriggerQueue.dump !event_queue (fun x -> x#get_name) in
+      let* deliver_events = self#fetch_and_handle_events space in
+      match (left_evts @ deliver_events) with
+      | [] -> Lwt.return []
+      | evts -> aux evts
+    end in
+    aux []
+    (* events <- left_evts; *)
   end
 
   method handle_command _ _ = ()
 
   method deliver_command space target_id cmd =
     let c = Hashtbl.find npcs (ID.of_string target_id) in
+    self#space.set_active c;
     c#handle_command space cmd
 
   method init (_:unit) =
@@ -224,9 +241,9 @@ class elt n = object(self)
     let space = self#space in
     let ts, buildings = init_map space config (TileRule.tile_rule self) in
     tiles <- ts;
-    ignore @@ List.iter (fun (s, f) -> ignore @@ self#handle_event space [|s|] f) buildings;
+    ignore @@ List.iter (fun (s, f) -> ignore @@ self#handle_event space s f) buildings;
     let center = tiles.(Array.length tiles/2) in
-    ignore @@ self#handle_event space [|center|] (Feature.mk_produce (Npc.Generator.generate_player center) 1)
+    ignore @@ self#handle_event space center (Feature.mk_produce (Npc.Generator.generate_player center) 1)
 
 end
 

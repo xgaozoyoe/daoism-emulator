@@ -19,7 +19,11 @@ class virtual elt ?(cmd=`Assoc []) n init_state ds info_builder tile = object (s
     ; ("state", state_to_json state info_builder)
     ; ("loc", Space.to_json self#get_loc)
     ; ("env", Environ.to_json self#get_env)
-    ; ("command", Yojson.Safe.to_basic (self#get_command))
+    ; ("inventory", `List (Array.to_list @@ Array.map (fun c ->
+        match c with
+        | None -> `Null
+        | Some attr -> Environ.elt_to_json attr
+        ) self#get_inventory))
   ])
 
   (* step universe space *)
@@ -30,7 +34,7 @@ class virtual elt ?(cmd=`Assoc []) n init_state ds info_builder tile = object (s
     let* fs, events = Lwt.return @@ Array.fold_left (fun (fs, events) (f, opt_target) ->
       match opt_target with
       | None -> (f::fs), events
-      | Some obj -> fs, ((f, [|(self:>Object.t)|], obj) :: events);
+      | Some obj -> fs, ((Event.mk_event f (self:>Object.t) obj) :: events);
     ) ([], []) state.deliver in
     let* _ = Logger.event_log " ---- takeing features ---- " in
     let* _ = Lwt.return @@ self#take_features @@ Array.of_list fs in

@@ -34,7 +34,7 @@ module Make (T: Interface) : Interface = struct
     List.fold_left (fun acc c -> acc ^ "." ^ T.to_string c)
         (T.to_string (List.hd t)) (List.tl t)
 
-  let of_string t = [ T.of_string t ]
+  let of_string t = List.map (fun x -> T.of_string x) (String.split_on_char '.' t)
 
 end
 

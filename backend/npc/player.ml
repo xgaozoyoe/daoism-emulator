@@ -46,7 +46,7 @@ class elt name tile = object (self)
           let mstate, _ = Common.Api.CommonState.fight_state state target in
           state <- mstate;
           space.cancel_event (self:>Object.t);
-          space.register_event (Timer.of_int 1) (self:>Object.t)
+          space.register_event (Timer.of_int 0) (self:>Object.t)
         with _ ->
           raise (Sdk.Command.InvalidCommand (id ^ " Not_found"))
       end

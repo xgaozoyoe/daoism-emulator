@@ -37,7 +37,7 @@ class elt n init_state ds info_builder (tile:Object.t)
     let* fs, events = Lwt.return @@ Array.fold_left (fun (fs, events) (f, opt_target) ->
       match opt_target with
       | None -> (f::fs), events
-      | Some obj -> fs, ((f, [|(self:>Object.t)|], obj) :: events);
+      | Some obj -> fs, ((Event.mk_event f (self:>Object.t) obj) :: events);
     ) ([], []) state.deliver in
     let* _ = Logger.event_log " ---- takeing features ---- " in
     let* _ = Lwt.return @@ self#take_features @@ Array.of_list fs in

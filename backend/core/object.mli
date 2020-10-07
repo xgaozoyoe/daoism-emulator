@@ -6,14 +6,18 @@ type t = <
   get_uid: UID.t;
   get_env: t Environ.t;
   get_loc: HexCoordinate.t;
+  get_inventory: (t Environ.elt option) array;
   set_loc: HexCoordinate.t -> unit;
   get_command: (Yojson.Safe.t) ;
   set_command: (Yojson.Safe.t) -> unit;
+  set_inventory: (t Environ.elt option) array -> unit;
+  set_event_entry: t Timer.TriggerQueue.t -> unit;
+  get_event_entry: t Timer.TriggerQueue.t;
   handle_command: (t Space.t) -> (Yojson.Safe.t) -> unit;
   take_features: (t Feature.t) array -> unit;
   to_json: Yojson.Basic.t;
-  step: t Space.t -> (t Feature.t * t array * t) list Lwt.t;
-  handle_event: t Space.t -> t array -> t Feature.t -> ((t Feature.t) * t array * t) list Lwt.t
+  step: t Space.t -> (t Event.t) list Lwt.t;
+  handle_event: t Space.t -> t -> t Feature.t -> (t Event.t) list Lwt.t
 >
 
 class virtual elt: ?cmd:Yojson.Safe.t -> string -> HexCoordinate.t -> object
@@ -29,11 +33,15 @@ class virtual elt: ?cmd:Yojson.Safe.t -> string -> HexCoordinate.t -> object
   method take_features: (t Feature.t) array -> unit
   method get_env: t Environ.t
   method get_command: (Yojson.Safe.t)
+  method get_inventory: (t Environ.elt option) array
   method set_command: (Yojson.Safe.t) -> unit
+  method set_inventory: (t Environ.elt option) array -> unit
+  method set_event_entry: t Timer.TriggerQueue.t -> unit
+  method get_event_entry: t Timer.TriggerQueue.t
   method virtual handle_command: t Space.t -> Yojson.Safe.t -> unit
   method virtual to_json: Yojson.Basic.t
-  method virtual step: t Space.t -> ((t Feature.t) * t array * t) list Lwt.t
-  method virtual handle_event: t Space.t -> t array -> t Feature.t -> ((t Feature.t) * t array * t) list Lwt.t
+  method virtual step: t Space.t -> (t Event.t) list Lwt.t
+  method virtual handle_event: t Space.t -> t -> t Feature.t -> (t Event.t) list Lwt.t
 end
 
 (*
@@ -51,3 +59,4 @@ type pre_event = (t Feature.t) * (t option)
 val pre_event_to_json: pre_event -> Yojson.Basic.t
 
 val compare: t -> t -> int
+val equip_item: t -> int -> unit

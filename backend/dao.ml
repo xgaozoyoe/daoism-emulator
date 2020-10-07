@@ -5,18 +5,32 @@ open WebsocketApi
 
 let world = Universe.init Universe.default_config;;
 
+let progress_lock = Lwt_mutex.create ();;
+
 let rec step _ : unit Lwt.t = begin
   let* _ = Lwt_unix.sleep 1.0 in
-  let* _ = Lwt.return @@ world#step world#space in
-  let* update_info = Lwt.return @@ world#get_update in
-  let* _ = UpdateDispatcher.broadcast update_info in
-  let* _ = GlobalData.update_data world#to_json in
-  (* let* _ = Core.Timer.TriggerQueue.dump world#get_events (fun x -> x#get_name) in *)
+  let* _ = Lwt_mutex.with_lock progress_lock @@ (fun _ ->
+    let* _ = Lwt.return @@ world#step world#space in
+    let* update_info = Lwt.return @@ world#get_update in
+    let* _ = UpdateDispatcher.broadcast update_info in
+    let* _ = GlobalData.update_data world#to_json in
+    Lwt.return_unit
+  ) in
   step ()
 end in
 
+let handle_command id json =
+  Lwt_mutex.with_lock progress_lock @@ (fun _ ->
+    let* _ = Lwt.return @@ world#deliver_command world#space id json in
+    let* update_info = Lwt.return @@ world#get_update in
+    let* _ = UpdateDispatcher.broadcast update_info in
+    let* _ = GlobalData.update_data world#to_json in
+    Lwt.return_unit
+  )
+in
+
 let main uri =
-  let handler = WebsocketApi.handler (fun id json -> Lwt.return @@ world#deliver_command world#space id json) in
+  let handler = WebsocketApi.handler handle_command in
   Resolver_lwt.resolve_uri ~uri Resolver_lwt_unix.system >>= fun endp ->
   let open Conduit_lwt_unix in
   endp_to_server ~ctx:default_ctx endp >>= fun server ->

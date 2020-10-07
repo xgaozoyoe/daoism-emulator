@@ -1,7 +1,8 @@
-type t
+type 'a t
 
-val mk_event: Object.t Feature.t -> Object.t array -> Object.t -> t
-val get_source: t -> Object.t array
-val get_feature: t -> Object.t Feature.t
-val get_target: t -> Object.t
-val to_string: t -> string
+val mk_event: 'a Feature.t -> 'a -> 'a -> 'a t
+val get_source: 'a t -> 'a
+val get_feature: 'a t -> 'a Feature.t
+val get_target: 'a t -> 'a
+
+val log_string: ('a -> string) -> 'a t -> string

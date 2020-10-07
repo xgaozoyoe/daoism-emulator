@@ -27,10 +27,9 @@ class elt n ttype cor ds = object (self)
   ]
 
   method handle_event _ src feature = begin
-    let src = src.(0) in
     let* _ = Logger.event_log "[ %s handles event %s from %s]\n" (self#get_name) (Feature.to_string feature) (src#get_name) in
     match feature with
-    | Hold (Object attr, _) -> begin
+    | Hold (Notice attr, _) -> begin
         let _ = match attr with
         | Enter -> src#set_loc self#get_loc; holds <- src :: holds
         | Leave -> holds <- List.filter_map (fun c ->
@@ -52,14 +51,14 @@ class elt n ttype cor ds = object (self)
       let fs, events = Array.fold_left (fun (fs, events) (f, opt_target) ->
         match opt_target with
         | None -> (f::fs), events
-        | Some obj -> fs, ((f, [|(self:>Object.t)|], obj) :: events);
+        | Some obj -> fs, ((Event.mk_event f (self:>Object.t) obj) :: events);
       ) ([], []) state.deliver in
       self#take_features @@ Array.of_list fs;
       Lwt.return events
     end in
 
     let* spawn_events = Lwt.return @@ List.map (fun (f,o) ->
-        (f, [|(self:>Object.t)|], o)
+        (Event.mk_event f (self:>Object.t) o)
       ) (Environ.apply_rules self#get_env) in
 
     (*

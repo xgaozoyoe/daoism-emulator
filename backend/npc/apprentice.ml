@@ -39,9 +39,9 @@ class elt name tile = object (self)
 
   method handle_event space src feature = begin
     let open Space in
+    space.set_active src;
     match feature with
     | Feature.Produce (Damage _, dmg) ->
-      let src = src.(0) in
       let* _ = Lwt_io.printf "%s 受到了来自 %s 的 %d 点攻击\n"
         self#get_name src#get_name dmg in
       let inner_state = state.state in
@@ -53,13 +53,14 @@ class elt name tile = object (self)
         let s, _ = CommonState.dead_state state loc_tile (space.the_universe ()) in
         state <- s;
         (* space register self t *)
-        Lwt.return []
+        let events = Array.map (fun (f, t) ->
+          (Event.mk_event f (self:>Object.t) (Option.get t))
+        ) s.deliver in
+        Lwt.return @@ Array.to_list events
       end else
         Lwt.return []
-    | Hold (Attribute.Api.Object Meet, _)  ->
-      Lwt.return [Feature.mk_produce
-        (* FIXME: src might be empty ? *)
-        (Attribute.Api.Damage Attribute.Damage.Straight) 1, [|(self :> Object.t)|], src.(0)]
+    | Hold (Attribute.Api.Notice Meet, _)  ->
+      Lwt.return []
     | _ -> Lwt.return []
   end
 
