@@ -1,4 +1,4 @@
-open UID
+open Sdk.UID
 open Utils
 module Attribute = Attribute.Api
 type t = <
@@ -81,3 +81,18 @@ let equip_item obj idx =
       let attr = Environ.replace_feature attr (obj#get_env) in
       invent.(idx) <- attr
     end
+
+exception InventorySlotNotEmpty
+let add_to_inventory obj idx attr =
+  let invent = obj#get_inventory in
+  match invent.(idx) with
+  | None -> invent.(idx) <- Some attr
+  | Some _ -> raise InventorySlotNotEmpty
+
+
+let inventory_to_json ivt =
+  `List (Array.to_list @@ Array.map (fun c ->
+     match c with
+     | None -> `Null
+     | Some attr -> Environ.elt_to_json attr
+     ) ivt)

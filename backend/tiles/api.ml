@@ -24,6 +24,7 @@ class elt n ttype cor ds = object (self)
     ; ("state", Common.Api.state_to_json state (fun _ -> `String "" ))
     ; ("loc", Space.to_json self#get_loc)
     ; ("env", Environ.to_json self#get_env)
+    ; ("inventory", Object.inventory_to_json self#get_inventory)
   ]
 
   method handle_event _ src feature = begin

@@ -1,4 +1,4 @@
-module ID:UID.Interface
+module ID: Sdk.UID.Interface
 module Attribute = Attribute.Api
 
 type 'a elt = 'a Attribute.t * int

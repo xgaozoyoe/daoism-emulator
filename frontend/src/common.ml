@@ -18,6 +18,10 @@ type location = {
   y:int;
 }[@@bs.deriving abstract]
 
+type inventory = {
+  attr: (string * int)
+}
+
 type state = {
   description: string;
   extra: string Js.Dict.t;

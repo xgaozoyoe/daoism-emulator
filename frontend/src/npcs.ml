@@ -6,6 +6,7 @@ module Npc = struct
     state:state;
     loc:location;
     env:environ;
+    inventory: (inventory Js.Nullable.t) array;
     command:string Js.Dict.t;
   }[@@bs.deriving abstract]
 
@@ -22,12 +23,19 @@ let build_npc_avatar info layout =
 let display_info info =
   let open Npc in
   let avatar = build_npc_avatar info in
+  let inventory = Array.mapi (fun i a ->
+    let r = "slot" ^ (string_of_int i) in
+      match Js.Nullable.toOption a with
+    | None -> (r, "Empty")
+    | Some _ -> (r, "Some")
+  ) (info |. inventoryGet) in
   let i = Js.Dict.fromList @@
     [
       "name", info |. nameGet;
       "state", info |. stateGet |. descriptionGet;
     ]
     @ (Array.to_list (Js.Dict.entries (info |. stateGet |. extraGet)))
+    @ (Array.to_list inventory)
   in
   let deliver = info |. stateGet |. deliverGet in
   let rules = info |. envGet |. rulesGet in

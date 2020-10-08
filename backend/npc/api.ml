@@ -19,11 +19,8 @@ class virtual elt ?(cmd=`Assoc []) n init_state ds info_builder tile = object (s
     ; ("state", state_to_json state info_builder)
     ; ("loc", Space.to_json self#get_loc)
     ; ("env", Environ.to_json self#get_env)
-    ; ("inventory", `List (Array.to_list @@ Array.map (fun c ->
-        match c with
-        | None -> `Null
-        | Some attr -> Environ.elt_to_json attr
-        ) self#get_inventory))
+    ; ("command", Yojson.Safe.to_basic (self#get_command))
+    ; ("inventory", Object.inventory_to_json self#get_inventory)
   ])
 
   (* step universe space *)

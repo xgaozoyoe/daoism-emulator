@@ -1,4 +1,4 @@
-open UID
+open Sdk.UID
 open Utils
 module Attribute = Attribute.Api
 type t = <
@@ -60,3 +60,5 @@ val pre_event_to_json: pre_event -> Yojson.Basic.t
 
 val compare: t -> t -> int
 val equip_item: t -> int -> unit
+val add_to_inventory: t -> int -> t Environ.elt -> unit
+val inventory_to_json: (t Environ.elt option) array -> Yojson.Basic.t

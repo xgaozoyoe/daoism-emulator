@@ -17,13 +17,15 @@ ws.onmessage = function(event) {
     var tiles_container = document.getElementById("tiles");
     var npcs_container = document.getElementById("npcs");
     if (connected) {
-        /* console.log(event.data); */
         var json = JSON.parse(event.data);
+        console.log(json);
         if (json.method == "global") {
           var global = json.data;
+          console.log(global);
           universe.build_tiles(global.tiles, global.world, tiles_container);
           universe.build_npcs(global.npcs, global.world, npcs_container);
         } else if (json.method == "update") {
+          console.log(json);
           var npcs = json.data.updates;
           var world = json.data.world;
           for (const idx in json.data.updates) {

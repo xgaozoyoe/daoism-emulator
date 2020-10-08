@@ -4,8 +4,8 @@ module Creature = Npc.Creature
 module Tile = Tiles.Api
 open Utils
 open Core
+open Sdk.UID
 
-module ID = UID.UID
 module ObjectSet = Set.Make (Object)
 
 type config = {
@@ -16,8 +16,8 @@ type config = {
 
 let default_config _ = {
   tile_rule = ();
-  map_width = 12;
-  map_height = 8;
+  map_width = 6;
+  map_height = 4;
 }
 
 let init_map space map_config rule_config =
@@ -72,8 +72,8 @@ class elt n = object(self)
 
   inherit Object.elt n (-1,-1)
 
-  val npcs:(ID.t, Object.t) Hashtbl.t = Hashtbl.create 10
-  val buildings:(ID.t, Object.t) Hashtbl.t = Hashtbl.create 10
+  val npcs:(UID.t, Object.t) Hashtbl.t = Hashtbl.create 10
+  val buildings:(UID.t, Object.t) Hashtbl.t = Hashtbl.create 10
   val mutable tiles = [||]
   val mutable events: Object.t Event.t list = []
   val event_queue = ref (Timer.TriggerQueue.mk_head Timer.TriggerQueue.empty)
@@ -161,7 +161,7 @@ class elt n = object(self)
         in
         match obj with
         | Some obj -> begin
-            Hashtbl.add npcs (ID.of_string obj#get_name) (obj:>Object.t);
+            Hashtbl.add npcs (UID.of_string obj#get_name) (obj:>Object.t);
             let x,y = obj#get_loc in
             let* _ = Lwt_io.printf "%s spawn at location (%d,%d)\n" obj#get_name x y in
             space.register_event (Timer.of_int 1) (obj:>Object.t);
@@ -172,7 +172,7 @@ class elt n = object(self)
     | Feature.Hold (Attribute.Api.Notice Attribute.Api.Dead, _) ->
       let npc = src in
       self#space.cancel_event npc;
-      Hashtbl.remove npcs (ID.of_string npc#get_name);
+      Hashtbl.remove npcs (UID.of_string npc#get_name);
       Lwt.return []
     | _ -> Lwt.return []
 
@@ -232,7 +232,7 @@ class elt n = object(self)
   method handle_command _ _ = ()
 
   method deliver_command space target_id cmd =
-    let c = Hashtbl.find npcs (ID.of_string target_id) in
+    let c = Hashtbl.find npcs (UID.of_string target_id) in
     self#space.set_active c;
     c#handle_command space cmd
 

@@ -20,7 +20,13 @@ class elt n init_state ds info_builder (tile:Object.t)
     ; ("loc", Space.to_json self#get_loc)
     ; ("env", Environ.to_json self#get_env)
     ; ("command", Yojson.Safe.to_basic (self#get_command))
+    ; ("inventory", `List (Array.to_list @@ Array.map (fun c ->
+        match c with
+        | None -> `Null
+        | Some attr -> Environ.elt_to_json attr
+        ) self#get_inventory))
   ]
+
 
   method handle_event _ _ (* space src *) feature = begin
     match feature with

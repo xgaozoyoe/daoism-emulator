@@ -1,4 +1,4 @@
-module ID = UID.UID
+module ID = Sdk.UID.UID
 module FeatureMap = Map.Make(ID)
 module Attribute = Attribute.Api
 

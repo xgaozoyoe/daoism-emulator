@@ -1,4 +1,4 @@
 (library
   (name core)
-  (libraries utils attribute lwt conduit-lwt-unix yojson lwt_ppx lwt_log)
+  (libraries utils attribute lwt conduit-lwt-unix yojson lwt_ppx lwt_log sdk)
 )

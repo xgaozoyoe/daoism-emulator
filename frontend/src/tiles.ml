@@ -16,6 +16,7 @@ module Tile = struct
     loc:location;
     ttype:tile_type;
     env:environ;
+    inventory: (inventory Js.Nullable.t) array;
   } [@@bs.deriving abstract]
 
 end
@@ -73,11 +74,19 @@ let build_tile i pos feature_svg =
 let display_info info =
   let open Tile in
   (* let avatar = build_tile info in *)
+  let inventory = Array.mapi (fun i a ->
+    let r = "slot" ^ (string_of_int i) in
+      match Js.Nullable.toOption a with
+    | None -> (r, "Empty")
+    | Some _ -> (r, "Some")
+  ) (info |. inventoryGet) in
+
   let avatar = fun _ -> "" in
-  let i = Js.Dict.fromList [
+  let i = Js.Dict.fromList @@ [
     "name", info |. nameGet;
     "type", info |. ttypeGet |. baseGet;
-  ] in
+  ] @ (Array.to_list inventory)
+  in
   let deliver = info |. stateGet |. Common.deliverGet in
   let rules = info |. envGet |. Common.rulesGet in
   Js.log (rules);
@@ -105,9 +114,10 @@ let handle_click info () =
   end
 
 
-let get_tile_element idx =
+(*let get_tile_element idx =
   let id = "tile_" ^ (string_of_int idx) in
   Document.get_by_id Document.document id
+*)
 
 let build_tiles tiles uinfo container=
   let open Tile in

@@ -1,4 +1,5 @@
 open Core
+open Sdk.UID
 
 let _ = Random.self_init ()
 
@@ -42,7 +43,7 @@ class elt name tile = object (self)
     | Ok (Attack id) -> begin
         try
           (* Might Raise Not_found *)
-          let target = space.get_npc (UID.UID.of_string id) in
+          let target = space.get_npc (UID.of_string id) in
           let mstate, _ = Common.Api.CommonState.fight_state state target in
           state <- mstate;
           space.cancel_event (self:>Object.t);
