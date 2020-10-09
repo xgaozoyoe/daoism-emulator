@@ -40,6 +40,19 @@ class elt n ttype cor ds = object (self)
         in
         Lwt.return []
       end
+    | Hold (Equipment att, k) ->
+      let inventory = self#get_inventory in
+      let _ = try
+          for i=0 to (Array.length inventory) - 1 do
+            match inventory.(i) with
+            | None -> begin
+                inventory.(i) <- Some (Equipment att, k);
+                raise Not_found
+              end
+            | Some _ -> ()
+          done
+        with _ -> ()
+      in Lwt.return []
     | _ -> Lwt.return []
   end
 

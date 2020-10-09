@@ -1,4 +1,7 @@
 open Core
+
+let _ = Random.self_init ()
+
 type 'a common_state = {
   description: string;
   deliver: ((Object.t Feature.t) * Object.t option) array;
@@ -79,5 +82,13 @@ module SpawnSystem = struct
 
   let get_spawners () =
     List.of_seq @@ SpawnMap.to_seq !spawn_map
+end
+
+module Inventory = struct
+  let get_drop inventory =
+    let len = Array.length inventory in
+    match inventory.(Random.int len) with
+    | Some (attr,n) -> [|Feature.mk_hold attr n|]
+    | None -> [||]
 end
 

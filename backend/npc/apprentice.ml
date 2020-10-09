@@ -56,7 +56,10 @@ class elt name tile = object (self)
         let events = Array.map (fun (f, t) ->
           (Event.mk_event f (self:>Object.t) (Option.get t))
         ) s.deliver in
-        Lwt.return @@ Array.to_list events
+        let drop = Array.map (fun f ->
+          (Event.mk_event f (self:>Object.t) loc_tile)
+        )  (Inventory.get_drop (self#get_inventory)) in
+        Lwt.return @@ (Array.to_list events) @ (Array.to_list drop)
       end else
         Lwt.return []
     | Hold (Attribute.Api.Notice Meet, _)  ->
