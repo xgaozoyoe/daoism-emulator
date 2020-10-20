@@ -18,9 +18,7 @@ type location = {
   y:int;
 }[@@bs.deriving abstract]
 
-type inventory = {
-  attr: (string * int)
-}
+type inventory = int Js.Dict.t
 
 type state = {
   description: string;
@@ -28,6 +26,5 @@ type state = {
   deliver: pre_event array;
 }[@@bs.deriving abstract]
 
-
-
-
+let get_the_entry dict =
+  (Js.Dict.entries dict).(0)

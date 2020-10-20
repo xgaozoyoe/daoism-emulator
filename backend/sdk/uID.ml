@@ -1,20 +1,27 @@
-module type Interface = sig
+module type Element = sig
   type t
-
   val compare: t -> t -> int
   val to_string: t -> string
   val of_string: string -> t
-
 end
 
-module Id = struct
+module type Full = sig
+  type t
+  val compare: t -> t -> int
+  val to_string: t -> string
+  val of_string: string -> t
+  val get_module_name: t -> string
+  val get_middle_name: t -> string
+end
+
+module Id:Element = struct
   type t = string
   let compare = String.compare
   let to_string t = t
   let of_string t = t
 end
 
-module Make (T: Interface) : Interface = struct
+module Make (T: Element) : Full = struct
 
   type t = T.t list
 
@@ -35,6 +42,9 @@ module Make (T: Interface) : Interface = struct
         (T.to_string (List.hd t)) (List.tl t)
 
   let of_string t = List.map (fun x -> T.of_string x) (String.split_on_char '.' t)
+
+  let get_module_name t = T.to_string (List.hd t)
+  let get_middle_name t = T.to_string (List.nth t 1)
 
 end
 

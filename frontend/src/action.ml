@@ -4,6 +4,9 @@ type hint = {
   ids: (string * loc * command) list;
   svg: string;
 }
+
+type hint_builder = string -> hint
+
 type state =
   | CollectCoordinate of hint
   | CollectTarget of hint

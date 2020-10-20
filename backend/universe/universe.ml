@@ -8,6 +8,8 @@ open Sdk.UID
 
 module ObjectSet = Set.Make (Object)
 
+let section = Lwt_log.Section.make "universe"
+
 type config = {
   tile_rule: unit;
   map_width: int;
@@ -39,7 +41,7 @@ let init_map space map_config rule_config =
     let info = tiles_info.(i) in
     let tile_type = info.ttype in
     let quality = Quality.Normal in
-    let tile_name = Printf.sprintf "tile_%d" i in
+    let tile_name = Printf.sprintf "Tile.%d" i in
     let tile = Tile.mk_tile tile_name tile_type quality info.cor in
     let rules = rule_config tile_type in
     Array.iter (fun rule -> Environ.install_rule rule tile#get_env) rules;
@@ -184,25 +186,7 @@ class elt n = object(self)
       let* es = v#step space in
       Lwt.return @@ es @ acc
     ) [] seq in
-
-    let my_events, deliver_events =
-      List.partition (fun e -> (Event.get_target e)#get_name = self#get_name)
-      evts
-    in
-    let* _ = Lwt_list.iter_s (fun e -> Logger.event_log "[ universe event: %s ]\n"
-        (Event.log_string (fun x->x#get_name) e)) my_events in
-    let* _ = Lwt_list.iter_s (fun e -> Logger.event_log "[ deliver event: %s ]\n"
-        (Event.log_string (fun x->x#get_name) e)) deliver_events in
-
-    (* Handle events that are generated for universe *)
-    let* _ = Lwt_list.iter_s (fun e ->
-      let feature = Event.get_feature e in
-      let src = Event.get_source e in
-      let* _ = self#handle_event space src feature in
-      Lwt.return_unit
-    ) my_events in
-
-    Lwt.return deliver_events
+    Lwt.return evts
   end
 
 
@@ -212,6 +196,8 @@ class elt n = object(self)
     let rec aux (evts:Object.t Event.t list) = begin
       let* left_evts = Lwt_list.fold_left_s (fun acc e ->
         let target = Event.get_target e in
+        let* _ = Lwt_log.debug_f ~section "[ set active: %s ]" self#get_name in
+        self#space.set_active target;
         let* evts = target#handle_event (self#space) (Event.get_source e) (Event.get_feature e) in
         Lwt.return @@ acc @ evts
       ) [] evts in
@@ -220,13 +206,31 @@ class elt n = object(self)
        * let* _ = Timer.TriggerQueue.dump event_queue (fun x -> x#get_name) in
        *)
       let* _ = Timer.TriggerQueue.dump !event_queue (fun x -> x#get_name) in
-      let* deliver_events = self#fetch_and_handle_events space in
-      match (left_evts @ deliver_events) with
+      let* evts = self#fetch_and_handle_events space in
+
+      let my_events, deliver_events =
+        List.partition (fun e -> (Event.get_target e)#get_name = self#get_name)
+        (left_evts @ evts)
+      in
+(*
+      let* _ = Lwt_list.iter_s (fun e -> Lwt_log.debug_f ~section "[ universe event: %s ]\n"
+          (Event.log_string (fun x->x#get_name) e)) my_events in
+      let* _ = Lwt_list.iter_s (fun e -> Lwt_log.debug_f ~section "[ deliver event: %s ]\n"
+          (Event.log_string (fun x->x#get_name) e)) deliver_events in
+*)
+      (* Handle events that are generated for universe *)
+      let* _ = Lwt_list.iter_s (fun e ->
+        let feature = Event.get_feature e in
+        let src = Event.get_source e in
+        let* _ = self#handle_event space src feature in
+        Lwt.return_unit
+      ) my_events in
+
+      match (deliver_events) with
       | [] -> Lwt.return []
       | evts -> aux evts
     end in
     aux []
-    (* events <- left_evts; *)
   end
 
   method handle_command _ _ = ()

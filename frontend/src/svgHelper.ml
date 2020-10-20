@@ -85,6 +85,16 @@ let mk_button_in container name (w, h) (cx, cy) txt cb =
   Document.appendChild container item;
   Document.add_event_listener item "click" cb
 
+let mk_group_in container name svg =
+  let item = Document.createElementSVG Document.document "g" in
+  let _ = match name with
+  | None -> ()
+  | Some n -> Document.setAttribute item "id" n
+  in
+  Document.setInnerHTML item svg;
+  Document.appendChild container item;
+  item
+
 let mk_rectangle_in container c (w,h) (cx, cy) =
   let points = Printf.sprintf
     "%d,%d %d,%d %d,%d %d,%d %d,%d"

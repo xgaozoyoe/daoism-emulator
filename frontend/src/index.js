@@ -4,6 +4,8 @@ WS === window.WebSocket
 var ws = new WS('ws://127.0.0.1:9001', '', 'http://example.com');
 var timer_status = 0;
 window.ws = ws;
+window.daoism = {};
+window.daoism.identity = function (x) {return x;};
 var universe = require ("../lib/js/src/universe.bs.js");
 
 ws.onopen = function() {
@@ -26,10 +28,10 @@ ws.onmessage = function(event) {
           universe.build_npcs(global.npcs, global.world, npcs_container);
         } else if (json.method == "update") {
           console.log(json);
-          var npcs = json.data.updates;
+          var objs = json.data.updates;
           var world = json.data.world;
           for (const idx in json.data.updates) {
-            universe.update_npc(npcs[idx], world, npcs_container);
+            universe.update_obj(objs[idx], world);
           }
         } else {
           console.log(json);

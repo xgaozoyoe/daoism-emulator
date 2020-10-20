@@ -1,14 +1,50 @@
 open Common
-type avatar_builder = (int * int) -> string
 
-type menu = {
-  avatar: avatar_builder * int; (* svg txt + height *)
-  info: string Js.Dict.t;
-  attributes: int Js.Dict.t;
-  methods: string Js.Dict.t;
-  rules: rule array;
-  deliver: pre_event array;
-}
+(* Dom related operation *)
+let get_menu_bg () = Document.get_by_id Document.document "menu-background"
+let get_menu_assist () = Document.get_by_id Document.document "menu-assist"
+let get_menu_fix () = Document.get_by_id Document.document "menu-fix"
+let get_menu_ctx () = Document.get_by_id Document.document "menu-ctx"
+
+let clear_menu_bg () =
+  Document.setInnerHTML (get_menu_bg ()) ""
+
+let clear_menu_assist () =
+  Document.setInnerHTML (get_menu_assist ()) ""
+
+let clear_menu_fix () =
+  Document.setInnerHTML (get_menu_fix ()) ""
+
+let clear_menu_ctx () =
+  Document.setInnerHTML (get_menu_ctx ()) ""
+
+let current_focus_id : (string option) ref = ref None
+let is_current_focus focus_id = (!current_focus_id = Some focus_id)
+let current_focus _ =
+  match !current_focus_id with
+  | None -> "None"
+  | Some id -> id
+
+let reset_menu () =
+  current_focus_id := None;
+  clear_menu_bg ();
+  clear_menu_fix ();
+  clear_menu_ctx ();
+  clear_menu_assist ()
+
+let reset_context_menu () =
+  clear_menu_ctx ();
+  clear_menu_bg ()
+
+let build_menu_hint svg =
+  Document.setInnerHTML (get_menu_assist ()) svg
+
+(* Menu elements *)
+
+type avatar_builder = ((int * int) -> string) * int
+
+type label = string
+type info = string
 
 type layout_info = {
   left: int;
@@ -17,20 +53,31 @@ type layout_info = {
   font_size: int;
 }
 
-let mk_menu a i attr ms rs dlvr = {
-  avatar = a;
-  info = i;
-  attributes = attr;
-  methods = ms;
-  rules = rs;
-  deliver = dlvr;
-}
+type info_component =
+  | Info of (label * info) array
+  | Methods of (string Js.Dict.t * Action.hint_builder)
+  | Tree of (label * info_component) array
+
+let mk_info infos = Info infos
+let mk_methods methods b = Methods (methods, b)
+let dict_to_info dict to_string =
+  Array.map (fun (k,v) -> (k, to_string v)) (Js.Dict.entries dict)
 
 type ('a, 'b) field_info = {
   key_func: 'a -> string;
   dict_func: 'a -> 'b Js.Dict.t;
   to_string: 'b -> string;
 }
+
+let rules_to_tree rules =
+  Tree (Array.map (fun c ->
+    c |. resultGet, mk_info (dict_to_info (c |. requireGet) string_of_int)
+  ) rules)
+
+let pre_event_to_tree events =
+  Tree (Array.map (fun c ->
+    c |. targetGet, mk_info (dict_to_info (c |. featureGet) (fun x -> x))
+  ) events)
 
 let rules_fields = {
   key_func = resultGet;
@@ -44,102 +91,56 @@ let event_fields = {
   to_string = (fun x -> x)
 }
 
-let current_focus_id : (string option) ref = ref None
-
-let reset_menu () =
-  current_focus_id := None;
-  let menu_container = Document.get_by_id Document.document "menu-background" in
-  let menu_ctx = Document.get_by_id Document.document "menu-ctx" in
-  let menu_assist = Document.get_by_id Document.document "menu-assist" in
-  let menu_fix = Document.get_by_id Document.document "menu-fix" in
-  Document.setInnerHTML menu_container "";
-  Document.setInnerHTML menu_ctx "";
-  Document.setInnerHTML menu_assist "";
-  Document.setInnerHTML menu_fix ""
-
-let reset_assist_menu () =
-  let menu_assist = Document.get_by_id Document.document "menu-assist" in
-  Document.setInnerHTML menu_assist ""
-
-let build_menu_hint svg =
-  let menu_assist = Document.get_by_id Document.document "menu-assist" in
-  Document.setInnerHTML menu_assist svg
-
+(* Default constants *)
 let content_start = {left=20; top=20; padding=5; font_size=18}
-
-let show_panel cb () =
-  let menu_container = Document.get_by_id Document.document "menu-ctx" in
-  let menu_assist = Document.get_by_id Document.document "menu-assist" in
-  let menu_bg = Document.get_by_id Document.document "menu-background" in
-  Document.setInnerHTML menu_container "";
-  Document.setInnerHTML menu_assist "";
-  Document.setInnerHTML menu_bg "";
-  cb menu_container
-
-let build_panel avatar (left, top) cb =
-  let menu_fix = Document.get_by_id Document.document "menu-fix" in
-
-  (* Adding panel tab into menu-fix *)
-  let tab = Document.createElementSVG Document.document "g" in
-  Document.appendChild menu_fix tab;
-  let avatar_content, avatar_height = avatar in
-  let top_center = top + avatar_height/2 in
-  let left_center = left + avatar_height/2 in
-  let content = avatar_content (left_center, top_center) in
-  Document.setInnerHTML tab content;
-  let _ = SvgHelper.mk_rectangle_in tab "menu-rect" (40,40)
-    (left,top) in
-  Document.add_event_listener tab "click" (show_panel cb)
-
 let panel_start = {left=20; top=70; padding=5; font_size=18}
 
-(* show diction attributes *)
-let build_dict_attrs dict to_string pinfo outter =
+let rec show_info_component pinfo comp outter = match comp with
+  | Info infos -> show_info pinfo infos outter
+  | Methods (commands, act_builder) -> show_info_method pinfo commands act_builder outter
+  | Tree infos -> show_info_tree pinfo infos outter
+
+and show_info pinfo info outter =
   let g = Document.createElementSVG Document.document "g" in
   let left = pinfo.left + pinfo.padding in
   let info, top_offset = Array.fold_left (fun (acc,top_offset) (name, info) ->
     let c = SvgHelper.mk_text "menu-item"
-        (left, top_offset)
-        (name ^ ":" ^ (to_string info))
+        (left, top_offset + pinfo.font_size)
+        (name ^ ":" ^ info)
     in
     (acc ^ c), top_offset + pinfo.font_size + pinfo.padding
-  ) ("", pinfo.top + pinfo.padding + pinfo.font_size) (Js.Dict.entries dict) in
+  ) ("", pinfo.top + pinfo.padding) info in
   Document.setInnerHTML g info;
   Document.appendChild outter g;
-  top_offset - pinfo.font_size + pinfo.padding
+  top_offset
 
-let build_info_tree rules finfo pinfo outter =
+and show_info_tree pinfo infos outter =
   let g = Document.createElementSVG Document.document "g" in
   let left_offset = pinfo.left + pinfo.padding in
-  Js.log rules;
-  Js.log "Build info tree!";
-  let (info, top_offset) = Array.fold_left (fun (acc, top) rule ->
-    let top = top + pinfo.padding + pinfo.font_size in
-    let dict = rule |. finfo.dict_func in
-    let label = rule |. finfo.key_func in
-    let c = SvgHelper.mk_text "menu-item"
-        (left_offset, top)
-        label
-    in
-    let acc = acc ^ c in
-    let top_offset = top + pinfo.padding + pinfo.font_size in
-    let left_offset = left_offset + pinfo.padding * 2 in
-    Array.fold_left (fun (acc, top) (name,value) ->
+  let (info, top_offset) = Array.fold_left (
+    fun (acc, top) (label, info_comp) -> begin
+      let top = top + pinfo.padding + pinfo.font_size in
       let c = SvgHelper.mk_text "menu-item"
-        (left_offset, top)
-        (name ^ ":" ^ finfo.to_string value)
+          (left_offset, top)
+          label
       in
-      (acc ^ c), top_offset + pinfo.font_size + pinfo.padding
-    ) (acc, top_offset) (Js.Dict.entries dict)
-  )  ("", pinfo.top) rules
+      let acc = acc ^ c in
+      let inner_pinfo = { pinfo with
+          top = top + pinfo.font_size;
+          left = left_offset + pinfo.padding
+      } in
+      let top_offset = show_info_component pinfo info_comp outter in
+      (acc, top_offset)
+    end
+  )  ("", pinfo.top) infos
   in
   Document.setInnerHTML g info;
   Document.appendChild outter g;
   top_offset
 
-let build_menu_methods methods hint_builder pinfo outter =
+and show_info_method pinfo methods hint_builder outter =
   (* Dynamic buttons with event handler *)
-  let top_offset = pinfo.top in
+  let top_offset = pinfo.top + pinfo.padding in
   let left_offset = pinfo.left + pinfo.padding in
   let left_boundary = pinfo.left + 200 in
   let button_width = 30 in
@@ -163,67 +164,71 @@ let build_menu_methods methods hint_builder pinfo outter =
   ) (left_offset, top_offset) (Js.Dict.entries methods) in
   top_offset
 
-let is_current_focus focus_id = (!current_focus_id = Some focus_id)
-let current_focus _ =
-  match !current_focus_id with
-  | None -> "None"
-  | Some id -> id
+type panel_content =
+  avatar_builder * (info_component list)
 
-let build_menu focus_id menu hint_builder =
+let mk_panel avatar infos = (avatar, infos)
 
+type panel_group =
+  avatar_builder * (panel_content list)
+
+let mk_panel_group avator panels = (avator, panels)
+
+type menu = {
+  panels: panel_group list
+}
+
+let mk_menu panels = {panels = panels}
+
+let show_panel (info_list:info_component list) () =
+  let outter = get_menu_ctx () in
+  clear_menu_ctx ();
+  clear_menu_bg ();
+  let bg = get_menu_bg () in
+  let pinfo = panel_start in
+  let top_offset = List.fold_left (fun top info ->
+    let p = {pinfo with top = top} in
+    show_info_component p info outter
+  ) panel_start.top info_list in
+  ignore @@ SvgHelper.mk_rectangle_in bg "menu" (200,top_offset)
+    (panel_start.left, panel_start.top)
+
+let build_panels (panels:panel_content list) =
+  let menu_fix = get_menu_fix () in
+  let top = 50 in
+  let left = 220 in
+  let offset_top = List.fold_left (fun top (avatar, p) ->
+    let tab = Document.createElementSVG Document.document "g" in
+    Document.appendChild menu_fix tab;
+    let avatar_content, avatar_height = avatar in
+    let top_center = top + avatar_height/2 in
+    let left_center = left + avatar_height/2 in
+    let content = avatar_content (left_center, top_center) in
+    Document.setInnerHTML tab content;
+    Document.add_event_listener tab "click" (show_panel p);
+    top + 36
+  ) (top + 20) panels in
+  show_panel (snd (List.hd panels)) ();
+  offset_top
+
+let build_menu focus_id menu =
   reset_menu ();
   current_focus_id := Some focus_id;
-
-  let pinfo = panel_start in
-
-  (* Panel one, contains base info and methods *)
-  let base_cb outter = begin
-    let top_offset = build_dict_attrs menu.info (fun x -> x)
-        panel_start outter in
-    let top_offset = build_menu_methods menu.methods hint_builder
-        {pinfo with top = top_offset} outter in
-    let menu_container = Document.get_by_id Document.document "menu-background" in
-    SvgHelper.mk_rectangle_in menu_container "menu" (200,top_offset)
-        (panel_start.left, panel_start.top)
-  end in
-  build_panel menu.avatar (20,20) base_cb;
-
-  (* Panel two, contains attributes info *)
-  let attributes_cb outter = begin
-    let top_offset = build_dict_attrs menu.attributes (fun x -> string_of_int x)
-        panel_start outter in
-    let menu_container = Document.get_by_id Document.document "menu-background" in
-    SvgHelper.mk_rectangle_in menu_container "menu" (200,top_offset)
-        (panel_start.left, panel_start.top)
-  end in
-
-  (* Panel three, contains rules info *)
-  let rules_cb outter = begin
-    let top_offset = build_info_tree menu.rules rules_fields
-        panel_start outter in
-    let menu_container = Document.get_by_id Document.document "menu-background" in
-    SvgHelper.mk_rectangle_in menu_container "menu" (200,top_offset)
-        (panel_start.left, panel_start.top)
-  end in
-
-  (* Panel three, contains rules info *)
-  let deliver_cb outter = begin
-    let top_offset = build_info_tree menu.deliver event_fields
-        panel_start outter in
-    let menu_container = Document.get_by_id Document.document "menu-background" in
-    SvgHelper.mk_rectangle_in menu_container "menu" (200,top_offset)
-        (panel_start.left, panel_start.top)
-  end in
-
-  let attr_avatar = (fun (cl, ct) -> SvgHelper.mk_text "menu-item" (cl, ct + 10) "B"), 30 in
-  build_panel attr_avatar (70,20) attributes_cb;
-
-  let dao_avatar = (fun (cl, ct) -> SvgHelper.mk_text "menu-item" (cl, ct + 10) "D"), 30 in
-  build_panel dao_avatar (120,20) deliver_cb;
-
-  let dao_avatar = (fun (cl, ct) -> SvgHelper.mk_text "menu-item" (cl, ct + 10) "R"), 30 in
-  build_panel dao_avatar (170,20) rules_cb;
-
+  let top = 20 in
+  let left = 20 in
+  let menu_fix = get_menu_fix () in
+  ignore @@ List.fold_left (fun left (((avatar:avatar_builder), (pgroup:panel_content list)):panel_group) ->
+    let tab = Document.createElementSVG Document.document "g" in
+    Document.appendChild menu_fix tab;
+    let avatar_content, avatar_height = avatar in
+    let top_center = top + avatar_height/2 in
+    let left_center = left + avatar_height/2 in
+    let content = avatar_content (left_center, top_center) in
+    Document.setInnerHTML tab content;
+    Document.add_event_listener tab "click" (build_panels pgroup);
+    left + 50
+  ) left menu.panels;
+  (*
   ignore @@ show_panel base_cb ();
-
+  *)
   ()

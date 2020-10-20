@@ -1,5 +1,6 @@
 open SvgHelper
 open Global
+open UID
 
 module Tile = struct
   open Common
@@ -61,57 +62,28 @@ let build_feature center f =
   | _ -> Printf.sprintf "<use href='/dist/res/%s.svg#main' x='%d' y='%d' width='40' height='40'/>"
     feature_name (x-20) (y-20)
 
-(* Make a single hexagon tile *)
-let build_tile i pos feature_svg =
-  let open Tile in
-  let name = i |. nameGet in
-  let typ_no = i |. ttypeGet |. baseGet in
-  let style = Printf.sprintf "hex_%s" typ_no in
-  let svg = SvgHelper.mk_hexagon style pos in
-  let svg = svg ^ feature_svg in
-  mk_group name svg
-
-let display_info info =
+let build_menu _ (*uinfo*) info =
   let open Tile in
   (* let avatar = build_tile info in *)
-  let inventory = Array.mapi (fun i a ->
-    let r = "slot" ^ (string_of_int i) in
-      match Js.Nullable.toOption a with
-    | None -> (r, "Empty")
-    | Some _ -> (r, "Some")
-  ) (info |. inventoryGet) in
+  let inventory = ControlPanel.mk_inventory_info (info |. inventoryGet) in
 
   let avatar = fun _ -> "" in
-  let i = Js.Dict.fromList @@ [
+  let basic = Menu.mk_info @@
+    [|
     "name", info |. nameGet;
     "type", info |. ttypeGet |. baseGet;
-  ] @ (Array.to_list inventory)
+    |]
   in
-  let deliver = info |. stateGet |. Common.deliverGet in
-  let rules = info |. envGet |. Common.rulesGet in
-  Js.log (rules);
-  Js.log (Array.length rules);
-  let attrs = Js.Dict.fromList [] in
-  let methods = Js.Dict.fromList [] in
-  Menu.mk_menu (avatar,10) i attrs methods rules deliver
-
-
-let handle_click info () =
-  (*let menu = Document.get_by_id Document.document "menu" in *)
-  let open Tile in
-  let cor = (info |. locGet |. Common.xGet), (info |. locGet |. Common.yGet) in
-  let reset = if (Action.state_wait_for_coordinate ()) then begin
-      if (Action.feed_state (info |. nameGet) cor ) then begin
-        Menu.reset_assist_menu ();
-        false
-      end else true
-    end else true
-  in
-  if reset then begin
-    Action.reset_state ();
-    Menu.build_menu (info |. nameGet) (display_info info) (fun _ -> Action.({
-    ids=[]; svg=""}))
-  end
+  let deliver = Menu.pre_event_to_tree (info |. stateGet |. Common.deliverGet) in
+  let rules = Menu.rules_to_tree @@ (info |. envGet |. Common.rulesGet) in
+  let menu = Menu.mk_menu [
+    Menu.mk_panel_group (avatar,40) [
+      Menu.mk_panel (Button.word_avatar "B") [basic; inventory];
+      Menu.mk_panel (Button.word_avatar "D") [deliver];
+      Menu.mk_panel (Button.word_avatar "R") [rules]
+    ]
+  ] in
+  Menu.build_menu (info |. nameGet) menu
 
 
 (*let get_tile_element idx =
@@ -119,25 +91,71 @@ let handle_click info () =
   Document.get_by_id Document.document id
 *)
 
-let build_tiles tiles uinfo container=
+let global_tiles = ref [||]
+
+let handle_click uinfo idx () =
+  let info = !global_tiles.(idx) in
+  (*let menu = Document.get_by_id Document.document "menu" in *)
   let open Tile in
+  let cor = (info |. locGet |. Common.xGet), (info |. locGet |. Common.yGet) in
+  let reset = if (Action.state_wait_for_coordinate ()) then begin
+      if (Action.feed_state (info |. nameGet) cor ) then begin
+        Menu.clear_menu_assist ();
+        false
+      end else true
+    end else true
+  in
+  if reset then begin
+    Action.reset_state ();
+    build_menu uinfo info
+  end
+
+(*
+let show_drop_menu idx =
+  let info = !global_tiles.(idx) in
+  let open Tile in
+  let inventory = Array.mapi (fun i a ->
+    match Js.Nullable.toOption a with
+    | None -> None
+    | Some _ -> Some (i, "Some")
+  ) (info |. inventoryGet) in
+  let drop = Array.fold_left (fun acc c ->
+    match c with
+    | None -> acc
+    | Some c -> acc @ [c]
+  ) [] inventory in
+  Menu.build_drop drop
+*)
+
+
+(* Make a single hexagon tile *)
+let build_tile uinfo outter idx i pos feature_svg =
+  let open Tile in
+  let name = i |. nameGet in
+  let typ_no = i |. ttypeGet |. baseGet in
+  let style = Printf.sprintf "hex_%s" typ_no in
+  let svg = SvgHelper.mk_hexagon style pos in
+  let svg = svg ^ feature_svg in
+  let item = mk_group_in outter (Some name) svg in
+  Document.add_event_listener item "click" (handle_click uinfo idx)
+
+let build_tiles tiles uinfo outter =
+  let open Tile in
+  global_tiles := tiles;
   let module HexCoordinate = HexCoordinate.Make (struct
     let width = (uinfo |. widthGet)
     let height = (uinfo |. heightGet)
   end) in
-  Js.log tiles;
-  let svgs = Array.mapi (fun i info ->
+  Array.mapi (fun i info ->
     let cor = HexCoordinate.from_index i in
     let layout = HexCoordinate.layout cor in
     let tile_feature = info |. ttypeGet |. featuresGet in
     let feature_svg = Array.fold_left (fun svg f -> svg ^ (build_feature layout f)) "" tile_feature in
-    build_tile info layout feature_svg
-  ) tiles in
-  let innerHTML = Array.fold_left (fun acc c -> acc ^ c) "" svgs in
-  Document.setInnerHTML container innerHTML;
-  (* Register event handler for tiles *)
-  Array.map (fun info ->
-    let name = info |. nameGet in
-    let item = Document.get_by_id Document.document name in
-    Document.add_event_listener item "click" (handle_click info)
+    build_tile uinfo outter i info layout feature_svg
   ) tiles
+
+let update_tile info =
+  let open Tile in
+  let name = info |. nameGet in
+  let middle_name = UID.get_middle_name @@ UID.of_string name in
+  (!global_tiles).(int_of_string middle_name) <- info

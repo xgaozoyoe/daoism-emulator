@@ -34,12 +34,11 @@ let make_state quality = fun state space self ->
 
 class elt name tile = object (self)
 
-  inherit Api.elt name {health=10} (make_state Quality.Normal)
+  inherit Api.elt name {health=2} (make_state Quality.Normal)
     mk_state_info tile
 
   method handle_event space src feature = begin
     let open Space in
-    space.set_active src;
     match feature with
     | Feature.Produce (Damage _, dmg) ->
       let* _ = Lwt_io.printf "%s 受到了来自 %s 的 %d 点攻击\n"
@@ -74,6 +73,10 @@ end
 let mk_apprentice tile =
   let name = Core.Name.gen_name "Apprentice" in
   let obj = new elt name tile in
+  Object.add_to_inventory obj 0 (Attribute.Api.Equipment (Attribute.Equipment.mk_armor 1), 1);
+  Object.add_to_inventory obj 1 (Attribute.Api.Equipment (Attribute.Equipment.mk_armor 1), 1);
+  Object.add_to_inventory obj 2 (Attribute.Api.Equipment (Attribute.Equipment.mk_armor 1), 1);
+  Object.add_to_inventory obj 3 (Attribute.Api.Equipment (Attribute.Equipment.mk_armor 1), 1);
   obj
 
 let apprentice_rule oref : Object.t Environ.rule =

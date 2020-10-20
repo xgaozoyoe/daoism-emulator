@@ -1,4 +1,4 @@
-module ID: Sdk.UID.Interface
+open Sdk.UID
 module Attribute = Attribute.Api
 
 type 'a elt = 'a Attribute.t * int
@@ -8,7 +8,7 @@ type 'a t
 val empty: 'a rule list -> 'a t
 val proceed_feature: 'a Feature.t -> 'a t -> unit
 val replace_feature: 'a elt -> 'a t -> 'a elt option
-val fold: (ID.t -> ('a Attribute.t * int) -> 'a -> 'a)  -> 'a -> 'a t -> 'a
+val fold: (UID.t -> ('a Attribute.t * int) -> 'a -> 'a)  -> 'a -> 'a t -> 'a
 val install_rule: 'a rule -> 'a t -> unit
 val apply_rules: 'a t -> ('a Feature.t * 'a) list
 val set_bound: ('a Attribute.t * int) -> 'a t -> unit
