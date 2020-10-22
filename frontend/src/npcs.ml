@@ -39,7 +39,7 @@ let hint_builder uinfo info command_string =
   ) ([], "") cands in
   Action.({ids=ids; svg=svg})
 
-let build_menu uinfo info =
+let build_panel uinfo info =
   let open Npc in
   let avatar = build_npc_avatar info in
   let inventory = ControlPanel.mk_inventory_info (info |. inventoryGet) in
@@ -58,12 +58,19 @@ let build_menu uinfo info =
   let methods = Menu.mk_methods (info |. commandGet) (hint_builder uinfo info) in
   let deliver = Menu.pre_event_to_tree (info |. stateGet |. deliverGet) in
   let rules = Menu.rules_to_tree @@ (info |. envGet |. rulesGet) in
+  Menu.mk_panel_group (avatar,40) [
+    Menu.mk_panel (Button.word_avatar "B") [basic; extra; inventory; methods];
+    Menu.mk_panel (Button.word_avatar "D") [deliver];
+    Menu.mk_panel (Button.word_avatar "R") [rules]
+  ]
+
+let build_menu uinfo info =
+  let open Npc in
+  let loc = (info |. locGet |. xGet, info |. locGet |. yGet) in
+  let tile_info = Tiles.get_tile_info uinfo loc in
   let menu = Menu.mk_menu [
-    Menu.mk_panel_group (avatar,40) [
-      Menu.mk_panel (Button.word_avatar "B") [basic; extra; inventory; methods];
-      Menu.mk_panel (Button.word_avatar "D") [deliver];
-      Menu.mk_panel (Button.word_avatar "R") [rules]
-    ]
+    build_panel uinfo info;
+    Tiles.build_panel uinfo tile_info
   ] in
   Menu.build_menu (info |. nameGet) menu
 

@@ -28,3 +28,11 @@ type state = {
 
 let get_the_entry dict =
   (Js.Dict.entries dict).(0)
+
+let has_drop inventory =
+  Array.fold_left (fun acc a ->
+      match Js.Nullable.toOption a with
+    | None -> acc
+    | Some _ -> acc + 1
+  ) 0 inventory
+

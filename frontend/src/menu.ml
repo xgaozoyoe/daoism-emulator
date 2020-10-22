@@ -190,10 +190,11 @@ let show_panel (info_list:info_component list) () =
     let p = {pinfo with top = top} in
     show_info_component p info outter
   ) panel_start.top info_list in
+  let top_offset = if top_offset > 150 then top_offset else 150 in
   ignore @@ SvgHelper.mk_rectangle_in bg "menu" (200,top_offset)
     (panel_start.left, panel_start.top)
 
-let build_panels (panels:panel_content list) =
+let build_panels (panels:panel_content list) () =
   let menu_fix = get_menu_fix () in
   let top = 50 in
   let left = 220 in
@@ -226,9 +227,6 @@ let build_menu focus_id menu =
     let content = avatar_content (left_center, top_center) in
     Document.setInnerHTML tab content;
     Document.add_event_listener tab "click" (build_panels pgroup);
-    left + 50
+    left + 30
   ) left menu.panels;
-  (*
-  ignore @@ show_panel base_cb ();
-  *)
-  ()
+  ignore @@ build_panels (snd (List.hd menu.panels)) ()
