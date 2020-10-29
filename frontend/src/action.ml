@@ -1,16 +1,22 @@
 type loc = int * int
 type command = (string -> loc -> string)
-type hint = {
-  ids: (string * loc * command) list;
-  svg: string;
-}
-
-type hint_builder = string -> hint
 
 type state =
-  | CollectCoordinate of hint
-  | CollectTarget of hint
+  | CollectTarget of (string * (string list))
   | Idle
+
+let mk_collect_state (cmd, ids) = CollectTarget (cmd, ids)
+
+type action_method =
+| Fixed of string
+| Transitive of string * state
+
+let mk_fixed_method str = Fixed str
+let mk_transitive_method (svg, str) = Transitive (svg, str)
+
+type method_info = (string * string)
+type hint = string * action_method
+type hint_builder = method_info -> hint
 
 let state = ref Idle
 
@@ -29,35 +35,29 @@ let send_command cmd =
   Connection.send_command Connection.ws command
 
 let state_wait_for_coordinate () = match !state with
-  | CollectCoordinate _ -> true
+  | CollectTarget _ -> true
   | _ -> false
+
+let mk_coordinate_arg x y = Printf.sprintf "[%d,%d]" x y
+let mk_target_arg src = Printf.sprintf "\"%s\"" src
+let mk_pick_arg src idx = Printf.sprintf "[\"%s\", %d]" src idx
+
+let mk_command_info command_hint src arg_string =
+  Printf.sprintf "[\"%s\", [\"%s\", %s]]" src command_hint arg_string
 
 let feed_state id cor = match !state with
   | Idle -> Js.log "idle"; false
-  | CollectCoordinate cands -> begin
-      let r = (List.find_opt (fun (x,_,_) -> x = id) cands.ids) in
+  | CollectTarget (command, cands) -> begin
+      let r = (List.find_opt (fun c -> c = id) cands) in
       match r with
-      | Some (_, _, cmd) -> send_command (cmd id cor); true
-      | _ -> false
-    end
-  | CollectTarget cands -> begin
-      let r = (List.find_opt (fun (_,c,_) -> c = cor) cands.ids) in
-      match r with
-      | Some (_, _, cmd) -> send_command (cmd id cor); true
+      | Some c -> begin
+          let cmd = mk_command_info command id (mk_target_arg c) in
+          send_command cmd;
+          true
+        end
       | _ -> false
     end
 
 let set_state s = state:=s
 let reset_state s = state:=Idle
-
-let push_state state_string cands =
-  state := match state_string with
-  | "coordinate" -> CollectCoordinate cands
-  | "target" -> CollectTarget cands
-  | _ -> Idle
-
-let mk_command_info state_string src cand (x,y) =
-  match state_string with
-  | "coordinate" -> Printf.sprintf "[\"%s\", [\"Move\", [%d, %d]]]" src x y
-  | "target" -> Printf.sprintf "[\"%s\", [\"Attack\", \"%s\"]]" src cand
-  | _ -> "[]"
+let push_state s = (state := s)

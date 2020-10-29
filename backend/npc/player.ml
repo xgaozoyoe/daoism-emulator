@@ -17,9 +17,9 @@ let make_state _ = fun state _ _ -> Common.Api.CommonState.idle_state state
 let cmd = `Assoc [
     ("move",`String "coordinate");
     ("attack",`String "target");
-    ("train",`String "train");
-    ("construct",`String "construct");
-    ("think",`String "think");
+    ("train",`String "id");
+    ("construct",`String "id");
+    ("think",`String "unit");
   ]
 
 class elt name tile = object (self)

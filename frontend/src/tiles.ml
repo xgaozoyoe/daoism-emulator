@@ -134,23 +134,23 @@ let handle_click uinfo idx () =
     build_menu uinfo info
   end
 
-(*
-let show_drop_menu idx =
-  let info = !global_tiles.(idx) in
+(* The command will show the hint and push the action state *)
+let build_drop_menu src_id tinfo =
   let open Tile in
   let inventory = Array.mapi (fun i a ->
     match Js.Nullable.toOption a with
     | None -> None
-    | Some _ -> Some (i, "Some")
-  ) (info |. inventoryGet) in
-  let drop = Array.fold_left (fun acc c ->
-    match c with
+    | Some equip -> Some (i, "pick", Common.get_the_entry equip)
+  ) (tinfo |. inventoryGet) in
+  let ms = Array.fold_left (fun acc info ->
+    match info with
+    | Some (i, cmd, (n, c)) ->
+      let pick_arg = Action.mk_pick_arg (tinfo |. nameGet) i in
+      let cmd = Action.mk_command_info cmd src_id pick_arg in
+      (n, Action.mk_fixed_method cmd) :: acc
     | None -> acc
-    | Some c -> acc @ [c]
   ) [] inventory in
-  Menu.build_drop drop
-*)
-
+  Menu.mk_methods (Array.of_list ms)
 
 let build_tiles tiles uinfo outter =
   let open Tile in

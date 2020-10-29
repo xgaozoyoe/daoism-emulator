@@ -10,4 +10,3 @@ let mk_inventory_info inventory =
         let (n, i) = (Common.get_the_entry equip) in
         (r, n ^ ":" ^ string_of_int i)
     ) inventory
-

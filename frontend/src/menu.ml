@@ -55,11 +55,11 @@ type layout_info = {
 
 type info_component =
   | Info of (label * info) array
-  | Methods of (string Js.Dict.t * Action.hint_builder)
+  | Methods of ((string * Action.action_method) array)
   | Tree of (label * info_component) array
 
 let mk_info infos = Info infos
-let mk_methods methods b = Methods (methods, b)
+let mk_methods methods = Methods methods
 let dict_to_info dict to_string =
   Array.map (fun (k,v) -> (k, to_string v)) (Js.Dict.entries dict)
 
@@ -97,7 +97,7 @@ let panel_start = {left=20; top=70; padding=5; font_size=18}
 
 let rec show_info_component pinfo comp outter = match comp with
   | Info infos -> show_info pinfo infos outter
-  | Methods (commands, act_builder) -> show_info_method pinfo commands act_builder outter
+  | Methods commands -> show_info_method pinfo commands outter
   | Tree infos -> show_info_tree pinfo infos outter
 
 and show_info pinfo info outter =
@@ -129,7 +129,7 @@ and show_info_tree pinfo infos outter =
           top = top + pinfo.font_size;
           left = left_offset + pinfo.padding
       } in
-      let top_offset = show_info_component pinfo info_comp outter in
+      let top_offset = show_info_component inner_pinfo info_comp outter in
       (acc, top_offset)
     end
   )  ("", pinfo.top) infos
@@ -138,20 +138,22 @@ and show_info_tree pinfo infos outter =
   Document.appendChild outter g;
   top_offset
 
-and show_info_method pinfo methods hint_builder outter =
+and show_info_method pinfo methods outter =
   (* Dynamic buttons with event handler *)
   let top_offset = pinfo.top + pinfo.padding in
   let left_offset = pinfo.left + pinfo.padding in
   let left_boundary = pinfo.left + 200 in
   let button_width = 30 in
-  let (_, top_offset) = Array.fold_left (fun (left, top) (name, info) ->
+  let (_, top_offset) = Array.fold_left (fun (left, top) (name, m) ->
     let open Action in
-    let cands = hint_builder info in
     let command () = begin
-        build_menu_hint cands.svg;
-        Action.push_state info cands
+      match m with
+      | Fixed cmd -> Action.send_command cmd
+      | Transitive (svg, state) ->
+        build_menu_hint svg;
+        Action.push_state state
     end in
-    let _ = SvgHelper.mk_button_in outter ("btn-"^name) (button_width, button_width)
+    let _ = SvgHelper.mk_button_in outter ("btn-move") (button_width, button_width)
       (left, top) name command in
     let (left, top) =
       if (left + pinfo.padding * 2 + button_width > left_boundary) then
@@ -161,7 +163,7 @@ and show_info_method pinfo methods hint_builder outter =
         (*left_offset, top + button_width + pinfo.padding*)
     in
     (left, top)
-  ) (left_offset, top_offset) (Js.Dict.entries methods) in
+  ) (left_offset, top_offset) methods in
   top_offset
 
 type panel_content =

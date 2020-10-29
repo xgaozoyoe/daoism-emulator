@@ -20,7 +20,7 @@ let build_npc_avatar info layout =
   let svg_name = List.hd @@ String.split_on_char '.' name in
   SvgHelper.mk_use svg_name layout
 
-let hint_builder uinfo info command_string =
+let hint_builder uinfo info (cmd, arg) =
   let open Npc in
   let module HexCoordinate = HexCoordinate.Make (struct
     let width = (uinfo |. widthGet)
@@ -33,11 +33,13 @@ let hint_builder uinfo info command_string =
   let ids, svg = Array.fold_left (fun (ids, svg) cor ->
     let id = Printf.sprintf "Tile.%d" (HexCoordinate.get_index cor) in
     let layout = HexCoordinate.layout cor in
-    let command = Action.mk_command_info command_string name in
+    let command = Action.mk_command_info cmd name in
     let svg = svg ^ (SvgHelper.mk_hexagon_boundary 27 "hex_hint" layout) in
-    (id,cor,command) :: ids, svg
+    id :: ids, svg
   ) ([], "") cands in
-  Action.({ids=ids; svg=svg})
+  let action_state = Action.mk_collect_state (cmd, ids) in
+  let m = Action.mk_transitive_method (svg, action_state) in
+  m
 
 let build_panel uinfo info =
   let open Npc in
@@ -55,7 +57,9 @@ let build_panel uinfo info =
   let attrs = Menu.mk_info @@
     Menu.dict_to_info  (info |. envGet |. featuresGet) string_of_int
   in
-  let methods = Menu.mk_methods (info |. commandGet) (hint_builder uinfo info) in
+  let methods = Menu.mk_methods @@ Array.map (fun (cmd, arg) ->
+    cmd, hint_builder uinfo info (cmd, arg)
+  ) (Js.Dict.entries (info |. commandGet)) in
   let deliver = Menu.pre_event_to_tree (info |. stateGet |. deliverGet) in
   let rules = Menu.rules_to_tree @@ (info |. envGet |. rulesGet) in
   Menu.mk_panel_group (avatar,40) [
