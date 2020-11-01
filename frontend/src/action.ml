@@ -2,7 +2,7 @@ type loc = int * int
 type command = (string -> loc -> string)
 
 type state =
-  | CollectTarget of (string * (string list))
+  | CollectTarget of ((string -> string) * (string list))
   | Idle
 
 let mk_collect_state (cmd, ids) = CollectTarget (cmd, ids)
@@ -43,15 +43,15 @@ let mk_target_arg src = Printf.sprintf "\"%s\"" src
 let mk_pick_arg src idx = Printf.sprintf "[\"%s\", %d]" src idx
 
 let mk_command_info command_hint src arg_string =
-  Printf.sprintf "[\"%s\", [\"%s\", %s]]" src command_hint arg_string
+  Printf.sprintf "[\"%s\", [\"%s\", \"%s\"]]" src command_hint arg_string
 
-let feed_state id cor = match !state with
+let feed_state id _ = match !state with
   | Idle -> Js.log "idle"; false
   | CollectTarget (command, cands) -> begin
       let r = (List.find_opt (fun c -> c = id) cands) in
       match r with
-      | Some c -> begin
-          let cmd = mk_command_info command id (mk_target_arg c) in
+      | Some _ -> begin
+          let cmd = command id in
           send_command cmd;
           true
         end

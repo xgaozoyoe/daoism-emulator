@@ -15,11 +15,11 @@ let mk_state_info st =
 let make_state _ = fun state _ _ -> Common.Api.CommonState.idle_state state
 
 let cmd = `Assoc [
-    ("move",`String "coordinate");
-    ("attack",`String "target");
-    ("train",`String "id");
-    ("construct",`String "id");
-    ("think",`String "unit");
+    ("Move",`String "coordinate");
+    ("Attack",`String "target");
+    ("Train",`String "id");
+    ("Construct",`String "id");
+    ("Think",`String "unit");
   ]
 
 class elt name tile = object (self)
@@ -32,9 +32,10 @@ class elt name tile = object (self)
   method handle_command space command =
     let subcommand = Sdk.Command.subcommand_of_yojson command in
     match subcommand with
-    | Ok (Move cor) -> begin
+    | Ok (Move tile_id) -> begin
+        let tile_id = UID.of_string tile_id in
         let src_tile = Option.get @@ space.get_tile (self#get_loc) in
-        let target_tile = Option.get @@ space.get_tile cor in
+        let target_tile = Option.get @@ space.get_tile_by_id tile_id in
         let mstate, _ = Common.Api.CommonState.move_state state src_tile target_tile in
         state <- mstate;
         space.cancel_event (self:>Object.t);

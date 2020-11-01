@@ -8,6 +8,7 @@ type 'a t = {
   get_path: UID.t -> UID.t -> UID.t array;
   get_view: HexCoordinate.t -> 'a list;
   get_tile: HexCoordinate.t -> 'a option;
+  get_tile_by_id: UID.t -> 'a option;
   get_npc: UID.t -> 'a;
   register_event: Timer.slice -> 'a -> unit;
   cancel_event: 'a -> unit;

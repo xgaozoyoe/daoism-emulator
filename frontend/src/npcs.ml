@@ -29,15 +29,29 @@ let hint_builder uinfo info (cmd, arg) =
   let tile_cor = info |. locGet in
   let name = info |. nameGet in
   let cor = (tile_cor |. xGet), (tile_cor |. yGet) in
-  let cands = HexCoordinate.siblings cor in
+  let cands = HexCoordinate.valid_siblings cor in
   let ids, svg = Array.fold_left (fun (ids, svg) cor ->
-    let id = Printf.sprintf "Tile.%d" (HexCoordinate.get_index cor) in
-    let layout = HexCoordinate.layout cor in
-    let command = Action.mk_command_info cmd name in
-    let svg = svg ^ (SvgHelper.mk_hexagon_boundary 27 "hex_hint" layout) in
-    id :: ids, svg
+    let tile_info = Tiles.get_tile_info uinfo cor in
+    let holds = tile_info |. Tiles.Tile.holdsGet in
+    Js.log cmd;
+    if (cmd == "Attack") then
+      let layout = HexCoordinate.layout cor in
+      let svg = if (Array.length holds > 0) then
+        svg ^ (SvgHelper.mk_hexagon_boundary 27 "hex_hint" layout)
+      else svg in
+      ((Array.to_list holds) @ ids), svg
+    else begin
+      let id = Printf.sprintf "Tile.%d" (HexCoordinate.get_index cor) in
+      let layout = HexCoordinate.layout cor in
+      let svg = (*if (Array.length holds = 0) then *)
+        svg ^ (SvgHelper.mk_hexagon_boundary 27 "hex_hint" layout)
+      (* else svg *) in
+      id :: ids, svg
+    end
   ) ([], "") cands in
-  let action_state = Action.mk_collect_state (cmd, ids) in
+  let name = info |. nameGet in
+  let cmd_cb id = Action.mk_command_info cmd name id in
+  let action_state = Action.mk_collect_state (cmd_cb, ids) in
   let m = Action.mk_transitive_method (svg, action_state) in
   m
 

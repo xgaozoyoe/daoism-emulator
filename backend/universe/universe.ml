@@ -102,13 +102,16 @@ class elt n = object(self)
         o#set_event_entry @@
             Timer.TriggerQueue.register_event t o event_queue
       );
-      get_view = (fun cor ->
-        Coordinate.sibling_fold cor (fun acc _ sibling _ ->
-          sibling :: acc
-      ) [] tiles);
+      get_view = (fun cor -> List.map (fun cor ->
+        Coordinate.get_node cor tiles
+      ) (Array.to_list (Coordinate.valid_siblings cor)));
       get_tile = (fun cor -> Some (Coordinate.get_node cor tiles));
       set_active = (fun o -> update <- ObjectSet.add o update);
       get_npc = (fun id -> Hashtbl.find npcs id);
+      get_tile_by_id = (fun uid -> begin
+        let idx = int_of_string (UID.get_middle_name uid) in
+        Some (Coordinate.get_node (Coordinate.from_index idx) tiles)
+      end);
     }
 
   method get_update: Yojson.Basic.t =

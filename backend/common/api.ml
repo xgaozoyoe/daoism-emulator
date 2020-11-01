@@ -49,8 +49,7 @@ module CommonState = struct
     let es = begin
       if src = target then [||]
       else [|
-        Feature.mk_hold (mk_notice_attr Attribute.Api.Leave) 1, Some src
-        ; Feature.mk_hold (mk_notice_attr Attribute.Api.Enter) 1, Some target
+        Feature.mk_hold (mk_notice_attr Attribute.Api.Enter) 1, Some target
       |]
     end in
     { state with deliver = es; description = "move"}, Some (Timer.of_int 4)

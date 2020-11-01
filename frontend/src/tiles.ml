@@ -17,6 +17,7 @@ module Tile = struct
     loc:location;
     ttype:tile_type;
     env:environ;
+    holds: string array;
     inventory: (inventory Js.Nullable.t) array;
   } [@@bs.deriving abstract]
 
@@ -85,6 +86,7 @@ let build_panel uinfo info =
     [|
     "name", info |. nameGet;
     "type", info |. ttypeGet |. baseGet;
+    "stay", Array.fold_left (fun acc c -> acc ^ ";" ^ c) "" (info |. holdsGet);
     |]
   in
   let deliver = Menu.pre_event_to_tree (info |. stateGet |. Common.deliverGet) in

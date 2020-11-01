@@ -23,22 +23,34 @@ class elt n ttype cor ds = object (self)
     ; ("ttype", Default.to_json tile_type)
     ; ("state", Common.Api.state_to_json state (fun _ -> `String "" ))
     ; ("loc", Space.to_json self#get_loc)
+    ; ("holds", `List (List.map (fun x -> `String (x#get_name)) holds))
     ; ("env", Environ.to_json self#get_env)
     ; ("inventory", Object.inventory_to_json self#get_inventory)
   ]
 
-  method handle_event _ src feature = begin
-    let* _ = Logger.event_log "[ %s handles event %s from %s]\n" (self#get_name) (Feature.to_string feature) (src#get_name) in
-    match feature with
+  method handle_event space src feature = begin
+    let* _ = Lwt_io.printf "[ %s handles event %s from %s]\n" (self#get_name) (Feature.to_string feature) (src#get_name) in
+    let* evts = match feature with
     | Hold (Notice attr, _) -> begin
-        let _ = match attr with
-        | Enter -> src#set_loc self#get_loc; holds <- src :: holds
-        | Leave -> holds <- List.filter_map (fun c ->
+        let evts = match attr with
+        | Enter -> begin
+            let leave_tile = Option.get @@ space.get_tile (src#get_loc) in
+            src#set_loc self#get_loc;
+            holds <- List.filter_map (fun c ->
+              if (c#get_name = src#get_name) then None else Some c
+            ) holds;
+            holds <- src :: holds;
+            let feature = Feature.mk_hold (Common.Api.CommonState.mk_notice_attr Attribute.Api.Leave) 1 in
+            [Event.mk_event feature src leave_tile]
+          end
+        | Leave ->
+          holds <- List.filter_map (fun c ->
             if (c#get_name = src#get_name) then None else Some c
-          ) holds
-        | _ -> ()
+          ) holds;
+          []
+        | _ -> []
         in
-        Lwt.return []
+        Lwt.return evts
       end
     | Hold (Equipment att, k) ->
       let inventory = self#get_inventory in
@@ -54,6 +66,12 @@ class elt n ttype cor ds = object (self)
         with _ -> ()
       in Lwt.return []
     | _ -> Lwt.return []
+    in
+    let* _ = Lwt_io.printf "[ %s holds %d]\n" (self#get_name) (List.length holds) in
+    let* _ = Lwt_list.iter_s (fun e -> Lwt_io.printf ">> holds: %s\n" e#get_name) holds in
+    let (x,y) = src#get_loc in
+    let* _ = Lwt_io.printf "[ %s loc %d, %d]\n" (self#get_name) x y in
+    Lwt.return evts
   end
 
   method handle_command _ _ = ()

@@ -78,6 +78,12 @@ module Make (R:Rectangle) = struct
     let bottom = (x, y+1) in
     [|top;top_left;bottom_left;bottom;bottom_right;top_right|]
 
+  let valid_siblings cor =
+    Array.of_list @@ Array.fold_left (fun acc (x,y) ->
+      if (x>=0 && y>=0 && x<R.width && y<R.height) then (x,y) :: acc
+      else acc
+    ) [] (siblings cor)
+
   let direction dir pos =
    match dir with
    | Top -> top pos
