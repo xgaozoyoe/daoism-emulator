@@ -30,7 +30,6 @@ type obj_info = {
 }[@@bs.deriving abstract]
 
 let update_obj obj_info uinfo =
-  let tiles_outter = Document.get_by_id Document.document "tiles" in
   let npcs_outter = Document.get_by_id Document.document "npcs" in
   let name = obj_info |. nameGet in
   let id = UID.UID.of_string name in

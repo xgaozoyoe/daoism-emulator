@@ -38,12 +38,11 @@ let state_wait_for_coordinate () = match !state with
   | CollectTarget _ -> true
   | _ -> false
 
-let mk_coordinate_arg x y = Printf.sprintf "[%d,%d]" x y
 let mk_target_arg src = Printf.sprintf "\"%s\"" src
 let mk_pick_arg src idx = Printf.sprintf "[\"%s\", %d]" src idx
 
 let mk_command_info command_hint src arg_string =
-  Printf.sprintf "[\"%s\", [\"%s\", \"%s\"]]" src command_hint arg_string
+  Printf.sprintf "[\"%s\", [\"%s\", %s]]" src command_hint arg_string
 
 let feed_state id _ = match !state with
   | Idle -> Js.log "idle"; false

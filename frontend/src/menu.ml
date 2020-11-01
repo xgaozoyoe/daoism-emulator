@@ -94,6 +94,7 @@ let event_fields = {
 (* Default constants *)
 let content_start = {left=20; top=20; padding=5; font_size=18}
 let panel_start = {left=20; top=70; padding=5; font_size=18}
+let panel_right_boundary = 180
 
 let rec show_info_component pinfo comp outter = match comp with
   | Info infos -> show_info pinfo infos outter
@@ -142,8 +143,11 @@ and show_info_method pinfo methods outter =
   (* Dynamic buttons with event handler *)
   let top_offset = pinfo.top + pinfo.padding in
   let left_offset = pinfo.left + pinfo.padding in
-  let left_boundary = pinfo.left + 200 in
+  let left_boundary = pinfo.left + panel_right_boundary in
   let button_width = 30 in
+  let line = ref (1, true) in
+  let br () = let (l, _) = !line in line := (l, true) in
+  let push () = let (l, b) = !line in line := (if b then l + 1 else l), false in
   let (_, top_offset) = Array.fold_left (fun (left, top) (name, m) ->
     let open Action in
     let command () = begin
@@ -156,15 +160,20 @@ and show_info_method pinfo methods outter =
     let _ = SvgHelper.mk_button_in outter ("btn-move") (button_width, button_width)
       (left, top) name command in
     let (left, top) =
-      if (left + pinfo.padding * 2 + button_width > left_boundary) then
+      if (left + pinfo.padding * 2 + button_width < left_boundary) then
+        let _ = push () in
         (left + pinfo.padding + button_width , top)
       else
-        (left + pinfo.padding + button_width, top)
-        (*left_offset, top + button_width + pinfo.padding*)
+        let _ = br () in
+        (left_offset, top + button_width + pinfo.padding)
     in
     (left, top)
   ) (left_offset, top_offset) methods in
-  top_offset
+  let (l, br) = !line in
+  if
+    br then top_offset
+  else
+    top_offset + button_width + pinfo.padding
 
 type panel_content =
   avatar_builder * (info_component list)
@@ -193,13 +202,13 @@ let show_panel (info_list:info_component list) () =
     show_info_component p info outter
   ) panel_start.top info_list in
   let top_offset = if top_offset > 150 then top_offset else 150 in
-  ignore @@ SvgHelper.mk_rectangle_in bg "menu" (200,top_offset)
+  ignore @@ SvgHelper.mk_rectangle_in bg "menu" (panel_right_boundary,top_offset - 50)
     (panel_start.left, panel_start.top)
 
 let build_panels (panels:panel_content list) () =
   let menu_fix = get_menu_fix () in
   let top = 50 in
-  let left = 220 in
+  let left = panel_right_boundary + 20 in
   let offset_top = List.fold_left (fun top (avatar, p) ->
     let tab = Document.createElementSVG Document.document "g" in
     Document.appendChild menu_fix tab;

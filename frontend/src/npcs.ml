@@ -43,14 +43,15 @@ let hint_builder uinfo info (cmd, arg) =
     else begin
       let id = Printf.sprintf "Tile.%d" (HexCoordinate.get_index cor) in
       let layout = HexCoordinate.layout cor in
-      let svg = (*if (Array.length holds = 0) then *)
+      let svg = if (Array.length holds = 0) then
         svg ^ (SvgHelper.mk_hexagon_boundary 27 "hex_hint" layout)
-      (* else svg *) in
+      else svg in
       id :: ids, svg
     end
   ) ([], "") cands in
   let name = info |. nameGet in
-  let cmd_cb id = Action.mk_command_info cmd name id in
+  let cmd_cb id = Action.mk_command_info cmd name
+    (Action.mk_target_arg id) in
   let action_state = Action.mk_collect_state (cmd_cb, ids) in
   let m = Action.mk_transitive_method (svg, action_state) in
   m
@@ -76,8 +77,11 @@ let build_panel uinfo info =
   ) (Js.Dict.entries (info |. commandGet)) in
   let deliver = Menu.pre_event_to_tree (info |. stateGet |. deliverGet) in
   let rules = Menu.rules_to_tree @@ (info |. envGet |. rulesGet) in
+  let loc = (info |. locGet |. xGet, info |. locGet |. yGet) in
+  let tile_info = Tiles.get_tile_info uinfo loc in
+  let drops = Tiles.build_drop_menu (info |. nameGet) tile_info in
   Menu.mk_panel_group (avatar,40) [
-    Menu.mk_panel (Button.word_avatar "B") [basic; extra; inventory; methods];
+    Menu.mk_panel (Button.word_avatar "B") [basic; extra; inventory; drops; methods];
     Menu.mk_panel (Button.word_avatar "D") [deliver];
     Menu.mk_panel (Button.word_avatar "R") [rules]
   ]

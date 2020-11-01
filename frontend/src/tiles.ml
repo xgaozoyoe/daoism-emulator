@@ -68,7 +68,6 @@ let build_tile uinfo info pos radius =
   let open Tile in
   let tile_feature = info |. ttypeGet |. featuresGet in
   let feature_svg = Array.fold_left (fun svg f -> svg ^ (build_feature pos f)) "" tile_feature in
-  let name = info |. nameGet in
   let typ_no = info |. ttypeGet |. baseGet in
   let style = Printf.sprintf "hex_%s" typ_no in
   let svg = SvgHelper.mk_hexagon_boundary radius style pos in
@@ -142,7 +141,7 @@ let build_drop_menu src_id tinfo =
   let inventory = Array.mapi (fun i a ->
     match Js.Nullable.toOption a with
     | None -> None
-    | Some equip -> Some (i, "pick", Common.get_the_entry equip)
+    | Some equip -> Some (i, "Pick", Common.get_the_entry equip)
   ) (tinfo |. inventoryGet) in
   let ms = Array.fold_left (fun acc info ->
     match info with

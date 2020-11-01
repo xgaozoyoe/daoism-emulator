@@ -1,6 +1,7 @@
 type subcommand =
   | Move of string
   | Attack of string
+  | Pick of (string * int)
   | Construct of (int * int * int)
   [@@deriving yojson]
 

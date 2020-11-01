@@ -63,7 +63,7 @@ module CommonState = struct
       Feature.mk_hold (mk_notice_attr Attribute.Api.Leave) 1, Some tile
       ; Feature.mk_hold (mk_notice_attr Attribute.Api.Dead) 1, Some universe
     |] in
-    {state with deliver = es; description="death"}, Timer.of_int 1
+    {state with deliver = es; description="death"}, None
 end
 
 module SpawnSystem = struct
